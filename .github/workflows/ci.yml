@@ -26,13 +26,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.x
-      - uses: actions/download-artifact@v4
-        with:
-          name: wasi-sdk-21.0-linux.tar.gz
-          path: tmp
-          repository: WebAssembly/wasi-sdk
       - run: dotnet workload install wasm-experimental
-      - run: dotnet build wasm
+      - run: mkdir -p build/wasm-api && curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-21/wasi-sdk-21.0-linux.tar.gz -sSL | tar xvf - -C build/wasm-api/
+      - run: WASI_SDK_PATH=$PWD/build/wasm-api/wasi-sdk-21.0 dotnet build wasm
   build:
     needs: [dotnet]
     uses: openrewrite/gh-automation/.github/workflows/ci-gradle.yml@main
