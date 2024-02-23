@@ -28,7 +28,7 @@ jobs:
           dotnet-version: 8.x
       - run: dotnet workload install wasm-experimental
       - run: mkdir -p build/wasm-api && curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-21/wasi-sdk-21.0-linux.tar.gz -sSL | tar xfz - -C build/wasm-api/
-      - run: dotnet build wasm
+      - run: dotnet build -c Release /p:RuntimeIdentifier=wasi-wasm /p:WasmSingleFileBundle=true wasm
         env:
           WASI_SDK_PATH: ${{ github.workspace }}/build/wasm-api/wasi-sdk-21.0
       - run: find . -type f -name '*.wasm' | xargs ls -lh

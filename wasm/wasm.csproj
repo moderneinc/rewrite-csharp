@@ -7,6 +7,7 @@
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <GenerateProgramFile>false</GenerateProgramFile>
     <WasmBuildNative>true</WasmBuildNative>
+    <WasmGenerateAppBundle>true</WasmGenerateAppBundle>
     <WasmSingleFileBundle>true</WasmSingleFileBundle>
     <!-- workaround copied from https://github.com/dotnet/runtime/blob/main/src/mono/wasm/build/WasmApp.Common.targets -->
     <UseAppHost>false</UseAppHost>
