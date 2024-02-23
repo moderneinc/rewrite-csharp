@@ -20,6 +20,7 @@ import io.github.kawamuray.wasmtime.*;
 import io.github.kawamuray.wasmtime.wasi.WasiCtx;
 import io.github.kawamuray.wasmtime.wasi.WasiCtxBuilder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -50,19 +51,20 @@ class WasmtimeTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "CI", matches = "true")
     void wasm() {
         try (WasiCtx wasi = new WasiCtxBuilder()
-                .preopenedDir(Paths.get("/Users/knut/git/MyParser"), ".")
+                .preopenedDir(Paths.get("wasm"), ".")
 //                .stdout(Paths.get("stdout"))
                 .inheritStdout()
                 .inheritStderr()
                 // not sure what the purpose of the first arg is here...
-                .args(Arrays.asList("", "TransformVisitor.cs", "IntTypeToLongType"))
+                .args(Arrays.asList("", "src/TransformVisitor.cs", "IntTypeToLongType"))
                 .build();
              Store<Void> store = Store.withoutData(wasi);
              Linker linker = new Linker(store.engine());
              Engine engine = store.engine();
-             Module module = Module.fromFile(engine, "/Users/knut/git/MyParser/bin/Debug/net8.0/wasi-wasm/AppBundle/MyParser.wasm")) {
+             Module module = Module.fromFile(engine, "wasm/bin/Debug/net8.0/wasi-wasm/AppBundle/wasm.wasm")) {
             WasiCtx.addToLinker(linker);
             linker.module(store, "whatever", module);
             try (Func f = linker.get(store, "whatever", "_start").get().func()) {
