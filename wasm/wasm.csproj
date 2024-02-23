@@ -6,9 +6,10 @@
     <PublishTrimmed>true</PublishTrimmed>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <GenerateProgramFile>false</GenerateProgramFile>
+    <WasmBuildNative>true</WasmBuildNative>
     <WasmSingleFileBundle>true</WasmSingleFileBundle>
     <!-- workaround copied from https://github.com/dotnet/runtime/blob/main/src/mono/wasm/build/WasmApp.Common.targets -->
-    <UseAppHost>true</UseAppHost>
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
   <ItemGroup>
 <!--    <PackageReference Include="Extism.Pdk" Version="1.0.1" />-->
