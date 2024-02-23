@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifier>wasi-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <PublishTrimmed>true</PublishTrimmed>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <WasmSingleFileBundle>true</WasmSingleFileBundle>
+  </PropertyGroup>
+  <ItemGroup>
+<!--    <PackageReference Include="Extism.Pdk" Version="1.0.1" />-->
+<!--     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.9.0-3.final" /> -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.9.0-3.final" />
+<!--     <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0"> -->
+<!--       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets> -->
+<!--       <PrivateAssets>all</PrivateAssets> -->
+<!--     </PackageReference> -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="xunit" Version="2.7.0" />
+  </ItemGroup>
+</Project>
