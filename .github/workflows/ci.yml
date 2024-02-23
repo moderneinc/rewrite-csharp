@@ -31,6 +31,7 @@ jobs:
       - run: dotnet build wasm
         env:
           WASI_SDK_PATH: ${GITHUB_WORKSPACE}/build/wasm-api/wasi-sdk-21.0
+      - run: ls -lh wasm/bin/Debug/net8.0/wasi-wasm/AppBundle/wasm.wasm
   build:
     needs: [dotnet]
     uses: openrewrite/gh-automation/.github/workflows/ci-gradle.yml@main
