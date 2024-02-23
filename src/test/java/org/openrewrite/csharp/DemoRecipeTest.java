@@ -25,7 +25,7 @@ class DemoRecipeTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new DemoRecipe());
+        spec.recipe(new DemoRecipe(DemoRecipe.Transform.IntTypeToLongType));
     }
 
     @Test

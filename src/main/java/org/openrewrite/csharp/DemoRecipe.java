@@ -41,6 +41,38 @@ import static java.util.Objects.requireNonNull;
 @EqualsAndHashCode(callSuper = false)
 @Value
 public class DemoRecipe extends ScanningRecipe<Path> {
+
+    @Option(displayName = "Transform",
+            description = "Transform to apply.",
+            example = "LambdaToAnonMethod")
+    Transform transform;
+
+    public enum Transform {
+        LambdaToAnonMethod,
+        AnonMethodToLambda,
+        DoToWhile,
+        WhileToDo,
+        CheckedStmtToUncheckedStmt,
+        UncheckedStmtToCheckedStmt,
+        CheckedExprToUncheckedExpr,
+        UncheckedExprToCheckedExpr,
+        PostfixToPrefix,
+        PrefixToPostfix,
+        TrueToFalse,
+        FalseToTrue,
+        AddAssignToAssign,
+        RefParamToOutParam,
+        OutParamToRefParam,
+        RefArgToOutArg,
+        OutArgToRefArg,
+        OrderByAscToOrderByDesc,
+        OrderByDescToOrderByAsc,
+        DefaultInitAllVars,
+        ClassDeclToStructDecl,
+        StructDeclToClassDecl,
+        IntTypeToLongType,
+    }
+
     @Override
     public String getDisplayName() {
         return "Example WASM recipe";
