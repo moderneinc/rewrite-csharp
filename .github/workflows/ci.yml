@@ -26,6 +26,11 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasi-sdk-21.0-linux.tar.gz
+          path: tmp
+          repository: WebAssembly/wasi-sdk
       - run: dotnet workload install wasm-experimental
       - run: dotnet build wasm
   build:
