@@ -44,7 +44,17 @@ public class DemoRecipe extends ScanningRecipe<Path> {
 
     @Option(displayName = "Transform",
             description = "Transform to apply.",
-            example = "LambdaToAnonMethod")
+            example = "LambdaToAnonMethod",
+            valid = {"LambdaToAnonMethod", "AnonMethodToLambda", "DoToWhile", "WhileToDo",
+                    "CheckedStmtToUncheckedStmt", "UncheckedStmtToCheckedStmt",
+                    "CheckedExprToUncheckedExpr", "UncheckedExprToCheckedExpr",
+                    "PostfixToPrefix", "PrefixToPostfix", "TrueToFalse", "FalseToTrue",
+                    "AddAssignToAssign", "RefParamToOutParam",
+                    "OutParamToRefParam", "RefArgToOutArg", "OutArgToRefArg",
+                    "OrderByAscToOrderByDesc", "OrderByDescToOrderByAsc",
+                    "DefaultInitAllVars",
+                    "ClassDeclToStructDecl", "StructDeclToClassDecl",
+                    "IntTypeToLongType"})
     Transform transform;
 
     public enum Transform {
@@ -123,7 +133,7 @@ public class DemoRecipe extends ScanningRecipe<Path> {
                             .stdout(out)
                             .inheritStderr()
                             // not sure what the purpose of the first arg is here...
-                            .args(Arrays.asList("", sources.relativize(in).toString(), transform.name()))
+                            .args(Arrays.asList("", text.getSourcePath().toString(), transform.name()))
                             .build();
                          Store<Void> store = Store.withoutData(wasi);
                          Linker linker = new Linker(store.engine());
