@@ -106,7 +106,7 @@ public class DemoRecipe extends ScanningRecipe<Path> {
         return Preconditions.check(new PlainTextVisitor<ExecutionContext>() {
             @Override
             public @Nullable Tree visit(@Nullable Tree tree, ExecutionContext ctx) {
-                return tree instanceof PlainText && ((PlainText) tree).getSourcePath().getFileName().toString().endsWith(".cs") ? SearchResult.found(tree) : null;
+                return tree instanceof PlainText && ((PlainText) tree).getSourcePath().getFileName().toString().endsWith(".cs") ? SearchResult.found(tree) : tree;
             }
         }, new PlainTextVisitor<ExecutionContext>() {
             @Override
