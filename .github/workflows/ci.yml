@@ -33,14 +33,14 @@ jobs:
           curl -L https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-21/wasi-sdk-21.0-linux.tar.gz -sSL | tar xfz - -C build/wasm-api/
           export WASI_SDK_PATH=$PWD/build/wasm-api/wasi-sdk-21.0
           dotnet build wasm
-#  build:
-#    needs: [dotnet]
-#    uses: openrewrite/gh-automation/.github/workflows/ci-gradle.yml@main
-#    secrets:
-#      gradle_enterprise_access_key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-#      gradle_enterprise_cache_username: ${{ secrets.GRADLE_ENTERPRISE_CACHE_USERNAME }}
-#      gradle_enterprise_cache_password: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
-#      ossrh_username: ${{ secrets.OSSRH_USERNAME }}
-#      ossrh_token: ${{ secrets.OSSRH_TOKEN }}
-#      ossrh_signing_key: ${{ secrets.OSSRH_SIGNING_KEY }}
-#      ossrh_signing_password: ${{ secrets.OSSRH_SIGNING_PASSWORD }}
+  build:
+    needs: [dotnet]
+    uses: openrewrite/gh-automation/.github/workflows/ci-gradle.yml@main
+    secrets:
+      gradle_enterprise_access_key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+      gradle_enterprise_cache_username: ${{ secrets.GRADLE_ENTERPRISE_CACHE_USERNAME }}
+      gradle_enterprise_cache_password: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
+      ossrh_username: ${{ secrets.OSSRH_USERNAME }}
+      ossrh_token: ${{ secrets.OSSRH_TOKEN }}
+      ossrh_signing_key: ${{ secrets.OSSRH_SIGNING_KEY }}
+      ossrh_signing_password: ${{ secrets.OSSRH_SIGNING_PASSWORD }}
