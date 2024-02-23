@@ -23,7 +23,7 @@ dependencies {
     implementation("com.dylibso.chicory:runtime:latest.integration")
     implementation("com.dylibso.chicory:wasi:latest.integration")
     implementation("org.extism.sdk:extism:latest.integration")
-    implementation("org.extism:chicory-sdk:latest.integration")
+//    implementation("org.extism:chicory-sdk:latest.integration")
     implementation("io.github.kawamuray.wasmtime:wasmtime-java:latest.integration")
 
     testImplementation("org.assertj:assertj-core:latest.release")
