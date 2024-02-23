@@ -113,8 +113,9 @@ public class DemoRecipe extends ScanningRecipe<Path> {
             public PlainText visitText(PlainText text, ExecutionContext ctx) {
                 try {
                     Path dir = WorkingDirectoryExecutionContextView.view(ctx).getWorkingDirectory();
-                    Path sources = Files.createDirectory(dir.resolve("src"));
-                    Path in = Files.createTempFile(sources, "in", ".cs");
+                    Path sources = dir.resolve("src");
+                    Path in = sources.resolve(text.getSourcePath());
+                    Files.createDirectories(in.getParent());
                     Files.write(in, text.getText().getBytes(StandardCharsets.UTF_8));
                     Path out = Files.createTempFile(sources, "out", ".cs");
                     try (WasiCtx wasi = new WasiCtxBuilder()
@@ -122,7 +123,7 @@ public class DemoRecipe extends ScanningRecipe<Path> {
                             .stdout(out)
                             .inheritStderr()
                             // not sure what the purpose of the first arg is here...
-                            .args(Arrays.asList("", in.getFileName().toString(), "IntTypeToLongType"))
+                            .args(Arrays.asList("", in.getFileName().toString(), transform.name()))
                             .build();
                          Store<Void> store = Store.withoutData(wasi);
                          Linker linker = new Linker(store.engine());
@@ -134,6 +135,10 @@ public class DemoRecipe extends ScanningRecipe<Path> {
                             f.call(store);
                             byte[] bytes = Files.readAllBytes(out);
                             return text.withText(new String(bytes, 0, bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length, StandardCharsets.UTF_8));
+                        } finally {
+                            if (Files.exists(out)) {
+                                Files.delete(out);
+                            }
                         }
                     }
                 } catch (IOException e) {
