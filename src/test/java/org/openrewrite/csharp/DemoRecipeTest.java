@@ -39,7 +39,7 @@ class DemoRecipeTest implements RewriteTest {
             """
               long i = 42;
               """,
-            spec -> spec.path("Test.cs")
+            spec -> spec.path("src/Test.cs")
           )
         );
     }

@@ -123,7 +123,7 @@ public class DemoRecipe extends ScanningRecipe<Path> {
                             .stdout(out)
                             .inheritStderr()
                             // not sure what the purpose of the first arg is here...
-                            .args(Arrays.asList("", in.toString(), transform.name()))
+                            .args(Arrays.asList("", sources.relativize(in).toString(), transform.name()))
                             .build();
                          Store<Void> store = Store.withoutData(wasi);
                          Linker linker = new Linker(store.engine());
