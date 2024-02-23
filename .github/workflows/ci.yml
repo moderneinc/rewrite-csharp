@@ -26,8 +26,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.x
+      - run: dotnet workload install wasm-experimental
       - run: dotnet build wasm
   build:
+    needs: [dotnet]
     uses: openrewrite/gh-automation/.github/workflows/ci-gradle.yml@main
     secrets:
       gradle_enterprise_access_key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
