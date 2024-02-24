@@ -120,7 +120,8 @@ public class DemoRecipe extends ScanningRecipe<Path> {
             }
         }, new PlainTextVisitor<ExecutionContext>() {
 
-            final byte zwnbsp = (byte) '\uFEFF';
+            final char bomIndicator = '\uFEFF';
+            final byte[] bomIndicatorBytes = "\uFEFF".getBytes(StandardCharsets.UTF_8);
 
             @Override
             public PlainText visitText(PlainText text, ExecutionContext ctx) {
@@ -147,9 +148,24 @@ public class DemoRecipe extends ScanningRecipe<Path> {
                         try (Func f = linker.get(store, "whatever", "_start").get().func()) {
                             f.call(store);
                             byte[] bytes = Files.readAllBytes(out);
+                            String oldText = text.getText();
+                            boolean oldHasBom = oldText.charAt(0) == bomIndicator;
+                            boolean newHasBom = true;
+                            for (int i = 0; i < bomIndicatorBytes.length; i++) {
+                                if (bomIndicatorBytes[i] != bytes[i]) {
+                                    newHasBom = false;
+                                    break;
+                                }
+                            }
+                            if (oldHasBom && !newHasBom) {
+                                byte[] tmp = new byte[bytes.length + bomIndicatorBytes.length];
+                                System.arraycopy(bomIndicatorBytes, 0, tmp, 0, bomIndicatorBytes.length);
+                                System.arraycopy(bytes, 0, tmp, bomIndicatorBytes.length, bytes.length);
+                                bytes = tmp;
+                            }
                             String newText = new String(
                                     bytes,
-                                    bytes[0] == zwnbsp ? 1 : 0,
+                                    0,
                                     bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length,
                                     StandardCharsets.UTF_8);
                             return text.withText(newText);
