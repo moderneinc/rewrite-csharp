@@ -144,7 +144,8 @@ public class DemoRecipe extends ScanningRecipe<Path> {
                         try (Func f = linker.get(store, "whatever", "_start").get().func()) {
                             f.call(store);
                             byte[] bytes = Files.readAllBytes(out);
-                            return text.withText(new String(bytes, 0, bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length, StandardCharsets.UTF_8));
+                            String newText = new String(bytes, 0, bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length, StandardCharsets.UTF_8);
+                            return newText.equals(text.getText()) ? text : text.withText(newText);
                         } finally {
                             if (Files.exists(out)) {
                                 Files.delete(out);
