@@ -85,12 +85,12 @@ public class DemoRecipe extends ScanningRecipe<Path> {
 
     @Override
     public String getDisplayName() {
-        return "Example WASM recipe";
+        return "C# demo recipe";
     }
 
     @Override
     public String getDescription() {
-        return "Example WASM recipe.";
+        return "Demo recipe showcasing some simple C# transformations.";
     }
 
     @Override
