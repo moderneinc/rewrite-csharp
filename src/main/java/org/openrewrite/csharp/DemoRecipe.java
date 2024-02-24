@@ -119,6 +119,9 @@ public class DemoRecipe extends ScanningRecipe<Path> {
                 return tree instanceof PlainText && ((PlainText) tree).getSourcePath().getFileName().toString().endsWith(".cs") ? SearchResult.found(tree) : tree;
             }
         }, new PlainTextVisitor<ExecutionContext>() {
+
+            final byte zwnbsp = (byte) '\uFEFF';
+
             @Override
             public PlainText visitText(PlainText text, ExecutionContext ctx) {
                 try {
@@ -144,8 +147,12 @@ public class DemoRecipe extends ScanningRecipe<Path> {
                         try (Func f = linker.get(store, "whatever", "_start").get().func()) {
                             f.call(store);
                             byte[] bytes = Files.readAllBytes(out);
-                            String newText = new String(bytes, 0, bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length, StandardCharsets.UTF_8);
-                            return newText.equals(text.getText()) ? text : text.withText(newText);
+                            String newText = new String(
+                                    bytes,
+                                    bytes[0] == zwnbsp ? 1 : 0,
+                                    bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length,
+                                    StandardCharsets.UTF_8);
+                            return text.withText(newText);
                         } finally {
                             if (Files.exists(out)) {
                                 Files.delete(out);
