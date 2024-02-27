@@ -15,13 +15,8 @@
  */
 package org.openrewrite.csharp;
 
-import io.github.kawamuray.wasmtime.Module;
 import io.github.kawamuray.wasmtime.*;
-import io.github.kawamuray.wasmtime.wasi.WasiCtx;
-import io.github.kawamuray.wasmtime.wasi.WasiCtxBuilder;
-import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import org.openrewrite.*;
 import org.openrewrite.internal.lang.Nullable;
@@ -29,26 +24,15 @@ import org.openrewrite.marker.SearchResult;
 import org.openrewrite.text.PlainText;
 import org.openrewrite.text.PlainTextVisitor;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.lang.ref.Cleaner;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import static java.util.Objects.requireNonNull;
 
 @EqualsAndHashCode(callSuper = false)
 @Value
 public class DemoRecipe extends Recipe {
 
     private static final Cleaner cleaner = Cleaner.create();
-    transient WasmContext wasm = new WasmContext();
+    transient Wasm wasm = new Wasm("wasm.wasm");
 
     @Option(displayName = "Transform",
             description = "Transform to apply.",
@@ -121,10 +105,10 @@ public class DemoRecipe extends Recipe {
             @Override
             public PlainText visitText(PlainText text, ExecutionContext ctx) {
                 wasm.init();
-                try (Func transform = wasm.linker.get(wasm.store, "", "transform").get().func()) {
-                    wasm.heap.writeNullTerminatedString(wasm.heap.base, text.getText());
-                    Val[] result = transform.call(wasm.store, Val.fromI32(wasm.heap.getBase()), Val.fromI32(DemoRecipe.this.transform.ordinal()));
-                    byte[] bytes = wasm.heap.readBytesWithLength(result[0].i32());
+                try (Func transform = wasm.func("transform")) {
+                    wasm.getHeap().writeNullTerminatedString(wasm.getHeap().base, text.getText());
+                    Val[] result = transform.call(wasm.getStore(), Val.fromI32(wasm.getHeap().getBase()), Val.fromI32(DemoRecipe.this.transform.ordinal()));
+                    byte[] bytes = wasm.getHeap().readBytesWithLength(result[0].i32());
                     boolean beforeHasBom = text.getText().charAt(0) == bomIndicator;
                     if (beforeHasBom) {
                         boolean afterHasBom = true;
@@ -148,109 +132,4 @@ public class DemoRecipe extends Recipe {
         });
     }
 
-    static class WasmContext {
-
-        @Nullable
-        WasiCtx wasi;
-        Store<?> store;
-        Linker linker;
-        Engine engine;
-        Module module;
-        Memory memory;
-        Heap heap;
-
-        void init() {
-            if (wasi == null) {
-                wasi = new WasiCtxBuilder().build();
-                store = Store.withoutData(wasi);
-                linker = new Linker(store.engine());
-                engine = store.engine();
-                module = loadModule(engine);
-                WasiCtx.addToLinker(linker);
-                linker.module(store, "", module);
-                memory = linker.get(store, "", "memory").get().memory();
-                heap = Heap.create(store, memory, linker, 1_000_000);
-            }
-        }
-
-        private static Module loadModule(Engine engine) {
-            try {
-                Path devTimePath = Paths.get("src/main/resources/wasm.wasm");
-                if (Files.exists(devTimePath)) {
-                    return Module.fromFile(engine, devTimePath.toString());
-                } else {
-                    try (InputStream in = requireNonNull(DemoRecipe.class.getClassLoader().getResourceAsStream("wasm.wasm"))) {
-                        // read `in` into `byte[]`
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-                        in.transferTo(out);
-                        return Module.fromBinary(engine, out.toByteArray());
-                    }
-                }
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-
-        public void close() {
-            if (wasi != null) {
-                heap.close();
-                memory.close();
-                linker.close();
-                engine.close();
-                module.close();
-                store.close();
-                wasi.close();
-                wasi = null;
-            }
-        }
-    }
-
-    @Value
-    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-    static class Heap implements AutoCloseable {
-        Store<?> store;
-        Memory memory;
-        Linker linker;
-        int base;
-        int size;
-
-        static Heap create(Store<?> store, Memory memory, Linker linker, int size) {
-            try (Func malloc = linker.get(store, "", "malloc").get().func()) {
-                Val[] result = malloc.call(store, Val.fromI32(size));
-                return new Heap(store, memory, linker, result[0].i32(), size);
-            }
-        }
-
-        int writeNullTerminatedString(int addr, String text) {
-//            memory.grow(store, text.length());
-            ByteBuffer buffer = memory.buffer(store);
-            byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-            buffer.position(addr);
-            buffer.put(bytes);
-            buffer.put((byte) 0);
-            return buffer.position();
-        }
-
-        String readString(int addr) {
-            byte[] bytes = readBytesWithLength(addr);
-            return new String(bytes, StandardCharsets.UTF_8);
-        }
-
-        byte[] readBytesWithLength(int addr) {
-            ByteBuffer buffer = memory.buffer(store);
-            buffer.order(ByteOrder.LITTLE_ENDIAN);
-            int len = buffer.getInt(addr);
-            byte[] bytes = new byte[len];
-            buffer.position(addr + 4);
-            buffer.get(bytes, 0, bytes.length);
-            return bytes;
-        }
-
-        @Override
-        public void close() {
-            try (Func free = linker.get(store, "", "free").get().func()) {
-                free.call(store, Val.fromI32(base));
-            }
-        }
-    }
 }
