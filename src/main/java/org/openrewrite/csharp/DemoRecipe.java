@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -121,27 +122,27 @@ public class DemoRecipe extends Recipe {
             public PlainText visitText(PlainText text, ExecutionContext ctx) {
                 wasm.init();
                 try (Func transform = wasm.linker.get(wasm.store, "", "transform").get().func()) {
-                    int addr = wasm.heap.writeString(wasm.heap.base, text.getText());
-                    int addr2 = wasm.heap.writeString(addr, DemoRecipe.this.transform.name());
-                    Val[] result = transform.call(wasm.store, Val.fromI32(wasm.heap.getBase()), Val.fromI32(addr));
-                    byte[] bytes = wasm.heap.readBytes(result[0].i32());
-                    String oldText = text.getText();
-                    boolean oldHasBom = oldText.charAt(0) == bomIndicator;
-                    boolean newHasBom = true;
-                    for (int i = 0; i < bomIndicatorBytes.length; i++) {
-                        if (bomIndicatorBytes[i] != bytes[i]) {
-                            newHasBom = false;
-                            break;
+                    wasm.heap.writeNullTerminatedString(wasm.heap.base, text.getText());
+                    Val[] result = transform.call(wasm.store, Val.fromI32(wasm.heap.getBase()), Val.fromI32(DemoRecipe.this.transform.ordinal()));
+                    byte[] bytes = wasm.heap.readBytesWithLength(result[0].i32());
+                    boolean beforeHasBom = text.getText().charAt(0) == bomIndicator;
+                    if (beforeHasBom) {
+                        boolean afterHasBom = true;
+                        for (int i = 0; i < bomIndicatorBytes.length; i++) {
+                            if (bomIndicatorBytes[i] != bytes[i]) {
+                                afterHasBom = false;
+                                break;
+                            }
+                        }
+                        if (!afterHasBom) {
+                            byte[] tmp = new byte[bytes.length + bomIndicatorBytes.length];
+                            System.arraycopy(bomIndicatorBytes, 0, tmp, 0, bomIndicatorBytes.length);
+                            System.arraycopy(bytes, 0, tmp, bomIndicatorBytes.length, bytes.length);
+                            bytes = tmp;
                         }
                     }
-                    if (oldHasBom && !newHasBom) {
-                        byte[] tmp = new byte[bytes.length + bomIndicatorBytes.length];
-                        System.arraycopy(bomIndicatorBytes, 0, tmp, 0, bomIndicatorBytes.length);
-                        System.arraycopy(bytes, 0, tmp, bomIndicatorBytes.length, bytes.length);
-                        bytes = tmp;
-                    }
-                    String newText = new String(bytes, StandardCharsets.UTF_8);
-                    return text.withText(newText);
+                    String afterText = new String(bytes, StandardCharsets.UTF_8);
+                    return text.withText(afterText);
                 }
             }
         });
@@ -220,7 +221,7 @@ public class DemoRecipe extends Recipe {
             }
         }
 
-        int writeString(int addr, String text) {
+        int writeNullTerminatedString(int addr, String text) {
 //            memory.grow(store, text.length());
             ByteBuffer buffer = memory.buffer(store);
             byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
@@ -231,20 +232,16 @@ public class DemoRecipe extends Recipe {
         }
 
         String readString(int addr) {
-            byte[] bytes = readBytes(addr);
+            byte[] bytes = readBytesWithLength(addr);
             return new String(bytes, StandardCharsets.UTF_8);
         }
 
-        byte[] readBytes(int addr) {
+        byte[] readBytesWithLength(int addr) {
             ByteBuffer buffer = memory.buffer(store);
-            int i = addr;
-            for (; i < buffer.limit(); i++) {
-                if (buffer.get(i) == 0) {
-                    break;
-                }
-            }
-            byte[] bytes = new byte[i - addr];
-            buffer.position(addr);
+            buffer.order(ByteOrder.LITTLE_ENDIAN);
+            int len = buffer.getInt(addr);
+            byte[] bytes = new byte[len];
+            buffer.position(addr + 4);
             buffer.get(bytes, 0, bytes.length);
             return bytes;
         }
