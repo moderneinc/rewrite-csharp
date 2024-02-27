@@ -199,6 +199,7 @@ public class DemoRecipe extends Recipe {
                 module.close();
                 store.close();
                 wasi.close();
+                wasi = null;
             }
         }
     }
