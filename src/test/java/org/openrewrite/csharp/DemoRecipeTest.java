@@ -43,4 +43,20 @@ class DemoRecipeTest implements RewriteTest {
           )
         );
     }
+
+    @Test
+    void bom() {
+        rewriteRun(
+          text(
+            //language=c#
+            """
+              \uFEFFint i = 42;
+              """,
+            """
+              \uFEFFlong i = 42;
+              """,
+            spec -> spec.path("src/Test.cs")
+          )
+        );
+    }
 }

@@ -35,12 +35,17 @@ dependencies {
     testRuntimeOnly("org.openrewrite:rewrite-java-17")
 }
 
-tasks.named<Copy>("processResources").configure {
-    from(file("wasm/bin/Debug/net8.0/wasi-wasm/AppBundle/wasm.wasm")) {
-        into(".")
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    }
+tasks.compileJava {
+    // The Java `Cleaner` API requires at least Java 9
+    options.release = 17
 }
+
+//tasks.named<Copy>("processResources").configure {
+//    from(file("wasm/bin/Debug/net8.0/wasi-wasm/AppBundle/wasm.wasm")) {
+//        into(".")
+//        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+//    }
+//}
 
 // We don't care about publishing javadocs anywhere, so don't waste time building them
 tasks.withType<Javadoc>().configureEach {

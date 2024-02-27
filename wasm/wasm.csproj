@@ -1,26 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <RuntimeIdentifier>wasi-wasm</RuntimeIdentifier>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
     <PublishTrimmed>true</PublishTrimmed>
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <GenerateProgramFile>false</GenerateProgramFile>
-    <WasmBuildNative>true</WasmBuildNative>
-    <WasmGenerateAppBundle>true</WasmGenerateAppBundle>
-    <WasmSingleFileBundle>true</WasmSingleFileBundle>
-    <!-- workaround copied from https://github.com/dotnet/runtime/blob/main/src/mono/wasm/build/WasmApp.Common.targets -->
-    <UseAppHost>false</UseAppHost>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <MSBuildEnableWorkloadResolver>false</MSBuildEnableWorkloadResolver>
+
+    <RestoreAdditionalProjectSources>https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json</RestoreAdditionalProjectSources>
+    <IlcHostPackagePath>$(USERPROFILE)\.nuget\packages\runtime.win-x64.microsoft.dotnet.ilcompiler.llvm\9.0.0-alpha.1.24125.1</IlcHostPackagePath>
   </PropertyGroup>
+
   <ItemGroup>
-<!--    <PackageReference Include="Extism.Pdk" Version="1.0.1" />-->
-<!--     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.9.0-3.final" /> -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.9.0-3.final" />
-<!--     <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0"> -->
-<!--       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets> -->
-<!--       <PrivateAssets>all</PrivateAssets> -->
-<!--     </PackageReference> -->
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    <PackageReference Include="xunit" Version="2.7.0" />
+    <LinkerArg Include="-Wl,--export=malloc" />
+    <LinkerArg Include="-Wl,--export=free" />
+    <LinkerArg Include="-Wl,--export=__heap_base" />
+    <LinkerArg Include="-Wl,--export=__data_end" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.9.0-3.final" />
+    <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" Version="9.0.0-*" />
+    <PackageReference Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="9.0.0-*" />
+  </ItemGroup>
+
 </Project>

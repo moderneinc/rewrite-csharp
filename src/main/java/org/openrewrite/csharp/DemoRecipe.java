@@ -19,28 +19,34 @@ import io.github.kawamuray.wasmtime.Module;
 import io.github.kawamuray.wasmtime.*;
 import io.github.kawamuray.wasmtime.wasi.WasiCtx;
 import io.github.kawamuray.wasmtime.wasi.WasiCtxBuilder;
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import org.openrewrite.*;
 import org.openrewrite.internal.lang.Nullable;
 import org.openrewrite.marker.SearchResult;
-import org.openrewrite.scheduling.WorkingDirectoryExecutionContextView;
 import org.openrewrite.text.PlainText;
 import org.openrewrite.text.PlainTextVisitor;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.ref.Cleaner;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
+import java.nio.file.Paths;
 
 import static java.util.Objects.requireNonNull;
 
 @EqualsAndHashCode(callSuper = false)
 @Value
-public class DemoRecipe extends ScanningRecipe<Path> {
+public class DemoRecipe extends Recipe {
+
+    private static final Cleaner cleaner = Cleaner.create();
+    transient WasmContext wasm;
 
     @Option(displayName = "Transform",
             description = "Transform to apply.",
@@ -83,6 +89,12 @@ public class DemoRecipe extends ScanningRecipe<Path> {
         IntTypeToLongType,
     }
 
+    public DemoRecipe(Transform transform) {
+        this.transform = transform;
+        this.wasm = new WasmContext();
+        cleaner.register(wasm, wasm::close);
+    }
+
     @Override
     public String getDisplayName() {
         return "C# demo recipe";
@@ -94,91 +106,153 @@ public class DemoRecipe extends ScanningRecipe<Path> {
     }
 
     @Override
-    public Path getInitialValue(ExecutionContext ctx) {
-        try {
-            Path dir = Files.createDirectory(WorkingDirectoryExecutionContextView.view(ctx).getWorkingDirectory().resolve("wasm"));
-            Path wasm = dir.resolve("wasm.wasm");
-            InputStream wasmStream = DemoRecipe.class.getClassLoader().getResourceAsStream("wasm.wasm");
-            Files.copy(requireNonNull(wasmStream), wasm);
-            return wasm;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    @Override
-    public TreeVisitor<?, ExecutionContext> getScanner(Path acc) {
-        return TreeVisitor.noop();
-    }
-
-    @Override
-    public TreeVisitor<?, ExecutionContext> getVisitor(Path acc) {
-        return Preconditions.check(new PlainTextVisitor<ExecutionContext>() {
+    public TreeVisitor<?, ExecutionContext> getVisitor() {
+        return Preconditions.check(new PlainTextVisitor<>() {
             @Override
             public @Nullable Tree visit(@Nullable Tree tree, ExecutionContext ctx) {
                 return tree instanceof PlainText && ((PlainText) tree).getSourcePath().getFileName().toString().endsWith(".cs") ? SearchResult.found(tree) : tree;
             }
-        }, new PlainTextVisitor<ExecutionContext>() {
+        }, new PlainTextVisitor<>() {
 
             final char bomIndicator = '\uFEFF';
             final byte[] bomIndicatorBytes = "\uFEFF".getBytes(StandardCharsets.UTF_8);
 
             @Override
             public PlainText visitText(PlainText text, ExecutionContext ctx) {
-                try {
-                    Path dir = WorkingDirectoryExecutionContextView.view(ctx).getWorkingDirectory();
-                    Path sources = dir.resolve("src");
-                    Path in = sources.resolve(text.getSourcePath());
-                    Files.createDirectories(in.getParent());
-                    Files.write(in, text.getText().getBytes(StandardCharsets.UTF_8));
-                    Path out = Files.createTempFile(sources, "out", ".cs");
-                    try (WasiCtx wasi = new WasiCtxBuilder()
-                            .preopenedDir(sources, ".")
-                            .stdout(out)
-                            .inheritStderr()
-                            // not sure what the purpose of the first arg is here...
-                            .args(Arrays.asList("", text.getSourcePath().toString(), transform.name()))
-                            .build();
-                         Store<Void> store = Store.withoutData(wasi);
-                         Linker linker = new Linker(store.engine());
-                         Engine engine = store.engine();
-                         Module module = Module.fromFile(engine, acc.toString())) {
-                        WasiCtx.addToLinker(linker);
-                        linker.module(store, "whatever", module);
-                        try (Func f = linker.get(store, "whatever", "_start").get().func()) {
-                            f.call(store);
-                            byte[] bytes = Files.readAllBytes(out);
-                            String oldText = text.getText();
-                            boolean oldHasBom = oldText.charAt(0) == bomIndicator;
-                            boolean newHasBom = true;
-                            for (int i = 0; i < bomIndicatorBytes.length; i++) {
-                                if (bomIndicatorBytes[i] != bytes[i]) {
-                                    newHasBom = false;
-                                    break;
-                                }
-                            }
-                            if (oldHasBom && !newHasBom) {
-                                byte[] tmp = new byte[bytes.length + bomIndicatorBytes.length];
-                                System.arraycopy(bomIndicatorBytes, 0, tmp, 0, bomIndicatorBytes.length);
-                                System.arraycopy(bytes, 0, tmp, bomIndicatorBytes.length, bytes.length);
-                                bytes = tmp;
-                            }
-                            String newText = new String(
-                                    bytes,
-                                    0,
-                                    bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length,
-                                    StandardCharsets.UTF_8);
-                            return text.withText(newText);
-                        } finally {
-                            if (Files.exists(out)) {
-                                Files.delete(out);
-                            }
+                try (Func transform = wasm.linker.get(wasm.store, "", "transform").get().func()) {
+
+                    int addr = wasm.heap.writeString(wasm.heap.base, text.getText());
+                    int addr2 = wasm.heap.writeString(addr, DemoRecipe.this.transform.name());
+                    Val[] result = transform.call(wasm.store, Val.fromI32(wasm.heap.getBase()), Val.fromI32(addr));
+                    byte[] bytes = wasm.heap.readBytes(result[0].i32());
+                    String oldText = text.getText();
+                    boolean oldHasBom = oldText.charAt(0) == bomIndicator;
+                    boolean newHasBom = true;
+                    for (int i = 0; i < bomIndicatorBytes.length; i++) {
+                        if (bomIndicatorBytes[i] != bytes[i]) {
+                            newHasBom = false;
+                            break;
                         }
                     }
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
+                    if (oldHasBom && !newHasBom) {
+                        byte[] tmp = new byte[bytes.length + bomIndicatorBytes.length];
+                        System.arraycopy(bomIndicatorBytes, 0, tmp, 0, bomIndicatorBytes.length);
+                        System.arraycopy(bytes, 0, tmp, bomIndicatorBytes.length, bytes.length);
+                        bytes = tmp;
+                    }
+                    String newText = new String(
+                            bytes,
+                            0,
+                            bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length,
+                            StandardCharsets.UTF_8);
+                    return text.withText(newText);
                 }
             }
         });
+    }
+
+    @Value
+    static class WasmContext {
+
+        WasiCtx wasi;
+        Store<?> store;
+        Linker linker;
+        Engine engine;
+        Module module;
+        Memory memory;
+        Heap heap;
+
+        public WasmContext() {
+            wasi = new WasiCtxBuilder().build();
+            store = Store.withoutData(wasi);
+            linker = new Linker(store.engine());
+            engine = store.engine();
+            module = moduleAsBytes(engine);
+            WasiCtx.addToLinker(linker);
+            linker.module(store, "", module);
+            memory = linker.get(store, "", "memory").get().memory();
+            heap = Heap.create(store, memory, linker, 1_000_000);
+        }
+
+        private static Module moduleAsBytes(Engine engine) {
+            try {
+                Path devTimePath = Paths.get("src/main/resources/wasm.wasm");
+                if (Files.exists(devTimePath)) {
+                    return Module.fromFile(engine, devTimePath.toString());
+                } else {
+                    InputStream in = requireNonNull(DemoRecipe.class.getClassLoader().getResourceAsStream("wasm.wasm"));
+                    // read `in` into `byte[]`
+                    byte[] bytes = new byte[in.available()];
+                    int read = in.read(bytes);
+                    assert read == bytes.length;
+                    return Module.fromBinary(engine, bytes);
+                }
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        public void close() {
+            heap.close();
+            memory.close();
+            linker.close();
+            engine.close();
+            module.close();
+            store.close();
+            wasi.close();
+        }
+    }
+
+    @Value
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    static class Heap implements AutoCloseable {
+        Store<?> store;
+        Memory memory;
+        Linker linker;
+        int base;
+        int size;
+
+        static Heap create(Store<?> store, Memory memory, Linker linker, int size) {
+            try (Func malloc = linker.get(store, "", "malloc").get().func()) {
+                Val[] result = malloc.call(store, Val.fromI32(size));
+                return new Heap(store, memory, linker, result[0].i32(), size);
+            }
+        }
+
+        int writeString(int addr, String text) {
+//            memory.grow(store, text.length());
+            ByteBuffer buffer = memory.buffer(store);
+            byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+            buffer.position(addr);
+            buffer.put(bytes);
+            buffer.put((byte) 0);
+            return buffer.position();
+        }
+
+        String readString(int addr) {
+            byte[] bytes = readBytes(addr);
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
+
+        byte[] readBytes(int addr) {
+            ByteBuffer buffer = memory.buffer(store);
+            int i = addr;
+            for (; i < buffer.limit(); i++) {
+                if (buffer.get(i) == 0) {
+                    break;
+                }
+            }
+            byte[] bytes = new byte[i - addr];
+            buffer.position(addr);
+            buffer.get(bytes, 0, bytes.length);
+            return bytes;
+        }
+
+        @Override
+        public void close() {
+            try (Func free = linker.get(store, "", "free").get().func()) {
+                free.call(store, Val.fromI32(base));
+            }
+        }
     }
 }
