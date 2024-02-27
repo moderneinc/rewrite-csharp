@@ -140,11 +140,7 @@ public class DemoRecipe extends Recipe {
                         System.arraycopy(bytes, 0, tmp, bomIndicatorBytes.length, bytes.length);
                         bytes = tmp;
                     }
-                    String newText = new String(
-                            bytes,
-                            0,
-                            bytes[bytes.length - 1] == '\n' ? bytes.length - 1 : bytes.length,
-                            StandardCharsets.UTF_8);
+                    String newText = new String(bytes, StandardCharsets.UTF_8);
                     return text.withText(newText);
                 }
             }
@@ -168,7 +164,7 @@ public class DemoRecipe extends Recipe {
                 store = Store.withoutData(wasi);
                 linker = new Linker(store.engine());
                 engine = store.engine();
-                module = moduleAsBytes(engine);
+                module = loadModule(engine);
                 WasiCtx.addToLinker(linker);
                 linker.module(store, "", module);
                 memory = linker.get(store, "", "memory").get().memory();
@@ -176,7 +172,7 @@ public class DemoRecipe extends Recipe {
             }
         }
 
-        private static Module moduleAsBytes(Engine engine) {
+        private static Module loadModule(Engine engine) {
             try {
                 Path devTimePath = Paths.get("src/main/resources/wasm.wasm");
                 if (Files.exists(devTimePath)) {
