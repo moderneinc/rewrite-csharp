@@ -50,14 +50,5 @@ namespace wasm
 
             return visitor.Visit(sourceTree.GetRoot()).ToFullString();
         }
-        
-        static void Main(string[] args)
-        {
-            string sourceText = System.IO.File.ReadAllText(args[0]);
-            TransformKind transformKind = (TransformKind)Enum.Parse(typeof(TransformKind), args[1]);
-
-            string transformedCode = Transform(sourceText, transformKind);
-            Console.WriteLine(transformedCode);            
-        }
     }
 }
