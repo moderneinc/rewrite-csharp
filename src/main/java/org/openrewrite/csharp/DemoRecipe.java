@@ -29,6 +29,7 @@ import org.openrewrite.marker.SearchResult;
 import org.openrewrite.text.PlainText;
 import org.openrewrite.text.PlainTextVisitor;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -181,12 +182,12 @@ public class DemoRecipe extends Recipe {
                 if (Files.exists(devTimePath)) {
                     return Module.fromFile(engine, devTimePath.toString());
                 } else {
-                    InputStream in = requireNonNull(DemoRecipe.class.getClassLoader().getResourceAsStream("wasm.wasm"));
-                    // read `in` into `byte[]`
-                    byte[] bytes = new byte[in.available()];
-                    int read = in.read(bytes);
-                    assert read == bytes.length;
-                    return Module.fromBinary(engine, bytes);
+                    try (InputStream in = requireNonNull(DemoRecipe.class.getClassLoader().getResourceAsStream("wasm.wasm"))) {
+                        // read `in` into `byte[]`
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        in.transferTo(out);
+                        return Module.fromBinary(engine, out.toByteArray());
+                    }
                 }
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
