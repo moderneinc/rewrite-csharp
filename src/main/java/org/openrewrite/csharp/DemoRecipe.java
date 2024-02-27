@@ -46,7 +46,7 @@ import static java.util.Objects.requireNonNull;
 public class DemoRecipe extends Recipe {
 
     private static final Cleaner cleaner = Cleaner.create();
-    transient WasmContext wasm;
+    transient WasmContext wasm = new WasmContext();
 
     @Option(displayName = "Transform",
             description = "Transform to apply.",
@@ -91,8 +91,7 @@ public class DemoRecipe extends Recipe {
 
     public DemoRecipe(Transform transform) {
         this.transform = transform;
-        this.wasm = new WasmContext();
-        cleaner.register(wasm, wasm::close);
+        cleaner.register(this, wasm::close);
     }
 
     @Override
@@ -119,8 +118,8 @@ public class DemoRecipe extends Recipe {
 
             @Override
             public PlainText visitText(PlainText text, ExecutionContext ctx) {
+                wasm.init();
                 try (Func transform = wasm.linker.get(wasm.store, "", "transform").get().func()) {
-
                     int addr = wasm.heap.writeString(wasm.heap.base, text.getText());
                     int addr2 = wasm.heap.writeString(addr, DemoRecipe.this.transform.name());
                     Val[] result = transform.call(wasm.store, Val.fromI32(wasm.heap.getBase()), Val.fromI32(addr));
@@ -151,9 +150,9 @@ public class DemoRecipe extends Recipe {
         });
     }
 
-    @Value
     static class WasmContext {
 
+        @Nullable
         WasiCtx wasi;
         Store<?> store;
         Linker linker;
@@ -162,16 +161,18 @@ public class DemoRecipe extends Recipe {
         Memory memory;
         Heap heap;
 
-        public WasmContext() {
-            wasi = new WasiCtxBuilder().build();
-            store = Store.withoutData(wasi);
-            linker = new Linker(store.engine());
-            engine = store.engine();
-            module = moduleAsBytes(engine);
-            WasiCtx.addToLinker(linker);
-            linker.module(store, "", module);
-            memory = linker.get(store, "", "memory").get().memory();
-            heap = Heap.create(store, memory, linker, 1_000_000);
+        void init() {
+            if (wasi == null) {
+                wasi = new WasiCtxBuilder().build();
+                store = Store.withoutData(wasi);
+                linker = new Linker(store.engine());
+                engine = store.engine();
+                module = moduleAsBytes(engine);
+                WasiCtx.addToLinker(linker);
+                linker.module(store, "", module);
+                memory = linker.get(store, "", "memory").get().memory();
+                heap = Heap.create(store, memory, linker, 1_000_000);
+            }
         }
 
         private static Module moduleAsBytes(Engine engine) {
@@ -193,13 +194,15 @@ public class DemoRecipe extends Recipe {
         }
 
         public void close() {
-            heap.close();
-            memory.close();
-            linker.close();
-            engine.close();
-            module.close();
-            store.close();
-            wasi.close();
+            if (wasi != null) {
+                heap.close();
+                memory.close();
+                linker.close();
+                engine.close();
+                module.close();
+                store.close();
+                wasi.close();
+            }
         }
     }
 
