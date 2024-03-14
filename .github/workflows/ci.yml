@@ -54,13 +54,13 @@ jobs:
 
       ########################
       - name: build
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: ${{ env.GRADLE_SWITCHES }} build
 
       - name: publish-snapshots
         if: github.event_name != 'pull_request'
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: ${{ env.GRADLE_SWITCHES }} snapshot publish -PforceSigning -x test
         env:
