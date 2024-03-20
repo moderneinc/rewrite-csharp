@@ -32,10 +32,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-public class AddProperty extends Recipe {
+public class AddPropertyDemo extends Recipe {
     @Override
     public String getDisplayName() {
-        return "Adds a `from_csharp<n>` property to any given `.properties` file";
+        return "Demo recipe adding a `from_csharp<n>` property to any given `.properties` file";
     }
 
     @Override

@@ -21,11 +21,11 @@ import org.openrewrite.test.RewriteTest;
 
 import static org.openrewrite.properties.Assertions.properties;
 
-class AddPropertyTest implements RewriteTest {
+class AddPropertyDemoTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new AddProperty());
+        spec.recipe(new AddPropertyDemo());
     }
 
     @Test
