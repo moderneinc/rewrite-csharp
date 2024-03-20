@@ -63,4 +63,35 @@ class AddPropertyDemoTest implements RewriteTest {
           )
         );
     }
+
+    @Test
+    void multiple() {
+        rewriteRun(
+          spec -> spec.recipeFromYaml(
+            //language=yaml
+            """
+              ---
+              type: specs.openrewrite.org/v1beta/recipe
+              name: test.recipe
+              displayName: Test Recipe
+              recipeList:
+                - org.openrewrite.csharp.AddPropertyDemo
+                - org.openrewrite.csharp.AddPropertyDemo
+              """, "test.recipe"
+          ),
+          properties(
+            //language=properties
+            """
+              #foobar
+              from_csharp0 = new_value0
+              """,
+            """
+              #foobar
+              from_csharp0 = new_value0
+              from_csharp1 = new_value1
+              from_csharp2 = new_value2
+              """
+          )
+        );
+    }
 }
