@@ -20,6 +20,8 @@ dependencies {
 
     implementation(platform("org.openrewrite:rewrite-bom:${latest}"))
     implementation("org.openrewrite:rewrite-java")
+    implementation("org.openrewrite:rewrite-properties")
+    implementation("org.openrewrite:rewrite-remote:latest.integration")
     implementation("com.dylibso.chicory:runtime:latest.integration")
     implementation("com.dylibso.chicory:wasi:latest.integration")
     implementation("org.extism.sdk:extism:latest.integration")
