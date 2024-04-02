@@ -60,13 +60,13 @@ public class AddPropertyDemo extends Recipe {
                     CountingOutputStream outputStream = new CountingOutputStream(socket.getOutputStream());
                     PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(outputStream)));
                     sender.send(file, remoteState);
-                    System.out.println("> " + outputStream.getCount());
+                    System.out.println("\nsent " + outputStream.getCount() + " bytes\n");
                     socket.shutdownOutput();
 
                     CountingInputStream inputStream = new CountingInputStream(socket.getInputStream());
                     PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(inputStream)));
                     remoteState = (Properties.File) receiver.receive(file);
-                    System.out.println("< " + inputStream.getCount());
+                    System.out.println("\nreceived " + inputStream.getCount() + " bytes\n");
                     ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
                     return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
                 } catch (IOException e) {
