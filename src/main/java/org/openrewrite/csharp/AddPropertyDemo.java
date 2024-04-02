@@ -55,6 +55,7 @@ public class AddPropertyDemo extends Recipe {
                     PropertiesSender propertiesSender = new PropertiesSender(new SenderContext(sender));
                     propertiesSender.send(file, null);
                     sender.flush();
+                    socket.shutdownOutput();
 
                     InputStream inputStream = socket.getInputStream();
                     JsonReceiver receiver = new JsonReceiver(inputStream);
