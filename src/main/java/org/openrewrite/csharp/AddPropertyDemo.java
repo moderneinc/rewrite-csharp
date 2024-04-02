@@ -18,6 +18,9 @@ package org.openrewrite.csharp;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
+import org.openrewrite.csharp.internal.CountingInputStream;
+import org.openrewrite.csharp.internal.CountingOutputStream;
+import org.openrewrite.marker.RecipesThatMadeChanges;
 import org.openrewrite.properties.PropertiesIsoVisitor;
 import org.openrewrite.properties.tree.Properties;
 import org.openrewrite.remote.JsonReceiver;
@@ -28,9 +31,8 @@ import org.openrewrite.remote.properties.PropertiesReceiver;
 import org.openrewrite.remote.properties.PropertiesSender;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Optional;
 
 public class AddPropertyDemo extends Recipe {
     @Override
@@ -49,18 +51,24 @@ public class AddPropertyDemo extends Recipe {
         return new PropertiesIsoVisitor<>() {
             @Override
             public Properties.File visitFile(Properties.File file, ExecutionContext ctx) {
+                Optional<RecipesThatMadeChanges> recipesThatMadeChanges = file.getMarkers().findFirst(RecipesThatMadeChanges.class);
+                if (recipesThatMadeChanges.isPresent()) {
+                    file = file.withMarkers(file.getMarkers().withMarkers(file.getMarkers().getMarkers().stream().filter(m -> m != recipesThatMadeChanges.get()).toList()));
+                }
+                Properties.File remoteState = ctx.getMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE");
                 try (Socket socket = new Socket("localhost", 5001)) {
-                    OutputStream outputStream = socket.getOutputStream();
-                    JsonSender sender = new JsonSender(outputStream);
-                    PropertiesSender propertiesSender = new PropertiesSender(new SenderContext(sender));
-                    propertiesSender.send(file, null);
-                    sender.flush();
+                    CountingOutputStream outputStream = new CountingOutputStream(socket.getOutputStream());
+                    PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(outputStream)));
+                    sender.send(file, remoteState);
+                    System.out.println("> " + outputStream.getCount());
                     socket.shutdownOutput();
 
-                    InputStream inputStream = socket.getInputStream();
-                    JsonReceiver receiver = new JsonReceiver(inputStream);
-                    PropertiesReceiver propertiesReceiver = new PropertiesReceiver(new ReceiverContext(receiver));
-                    return (Properties.File) propertiesReceiver.receive(file);
+                    CountingInputStream inputStream = new CountingInputStream(socket.getInputStream());
+                    PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(inputStream)));
+                    remoteState = (Properties.File) receiver.receive(file);
+                    System.out.println("< " + inputStream.getCount());
+                    ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
+                    return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
