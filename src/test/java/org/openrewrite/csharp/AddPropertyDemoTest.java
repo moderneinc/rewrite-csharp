@@ -80,6 +80,7 @@ class AddPropertyDemoTest implements RewriteTest {
                     propertyKey: from_csharp0
                     newValue: modified_by_java
                 - org.openrewrite.csharp.AddPropertyDemo
+                - org.openrewrite.csharp.AddPropertyDemo
               """, "test.recipe"
           ),
           properties(
@@ -93,6 +94,7 @@ class AddPropertyDemoTest implements RewriteTest {
               existing = value
               from_csharp0 = modified_by_java
               from_csharp1 = new_value1
+              from_csharp2 = new_value2
               """
           )
         );
