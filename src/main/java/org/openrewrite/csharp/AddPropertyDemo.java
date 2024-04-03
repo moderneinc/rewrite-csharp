@@ -55,34 +55,38 @@ public class AddPropertyDemo extends Recipe {
         return new PropertiesIsoVisitor<>() {
             @Override
             public Properties.File visitFile(Properties.File file, ExecutionContext ctx) {
-                Optional<RecipesThatMadeChanges> recipesThatMadeChanges = file.getMarkers().findFirst(RecipesThatMadeChanges.class);
-                if (recipesThatMadeChanges.isPresent()) {
-                    file = file.withMarkers(file.getMarkers().withMarkers(file.getMarkers().getMarkers().stream().filter(m -> m != recipesThatMadeChanges.get()).toList()));
-                }
-                Properties.File remoteState = ctx.getMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE");
-                UnixDomainSocketAddress address = UnixDomainSocketAddress.of(Paths.get("/tmp/mysocket"));
-                try (SocketChannel socketChannel = SocketChannel.open(address)) {
-                    long t0 = System.nanoTime();
-                    CountingOutputStream outputStream = new CountingOutputStream(Channels.newOutputStream(socketChannel));
-                    PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(outputStream)));
-                    sender.send(file, remoteState);
-                    long t1 = System.nanoTime();
-                    socketChannel.shutdownOutput();
-
-                    long t2 = System.nanoTime();
-                    CountingInputStream inputStream = new CountingInputStream(Channels.newInputStream(socketChannel));
-                    PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(inputStream)));
-                    remoteState = (Properties.File) receiver.receive(file);
-                    long t3 = System.nanoTime();
-                    System.out.println("sent " + outputStream.getCount() + " bytes in " + TimeUnit.NANOSECONDS.toMillis(t1 - t0) + "ms / " +
-                                       "received " + inputStream.getCount() + " bytes in " + TimeUnit.NANOSECONDS.toMillis(t3 - t2) + "ms");
-                    ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
-                    return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                return runRecipe(file, ctx);
             }
         };
+    }
+
+    private static Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
+        Optional<RecipesThatMadeChanges> recipesThatMadeChanges = file.getMarkers().findFirst(RecipesThatMadeChanges.class);
+        if (recipesThatMadeChanges.isPresent()) {
+            file = file.withMarkers(file.getMarkers().withMarkers(file.getMarkers().getMarkers().stream().filter(m -> m != recipesThatMadeChanges.get()).toList()));
+        }
+        Properties.File remoteState = ctx.getMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE");
+        UnixDomainSocketAddress address = UnixDomainSocketAddress.of(Paths.get("/tmp/mysocket"));
+        try (SocketChannel socketChannel = SocketChannel.open(address)) {
+            long t0 = System.nanoTime();
+            CountingOutputStream outputStream = new CountingOutputStream(Channels.newOutputStream(socketChannel));
+            PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(outputStream)));
+            sender.send(file, remoteState);
+            long t1 = System.nanoTime();
+            socketChannel.shutdownOutput();
+
+            long t2 = System.nanoTime();
+            CountingInputStream inputStream = new CountingInputStream(Channels.newInputStream(socketChannel));
+            PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(inputStream)));
+            remoteState = (Properties.File) receiver.receive(file);
+            long t3 = System.nanoTime();
+            System.out.println("sent " + outputStream.getCount() + " bytes in " + TimeUnit.NANOSECONDS.toMillis(t1 - t0) + "ms / " +
+                               "received " + inputStream.getCount() + " bytes in " + TimeUnit.NANOSECONDS.toMillis(t3 - t2) + "ms");
+            ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
+            return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
