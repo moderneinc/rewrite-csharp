@@ -21,6 +21,7 @@ dependencies {
     implementation(platform("org.openrewrite:rewrite-bom:${latest}"))
     implementation("org.openrewrite:rewrite-java")
     implementation("org.openrewrite:rewrite-properties")
+    implementation("org.openrewrite:rewrite-xml")
     implementation("org.openrewrite:rewrite-remote:latest.integration")
     implementation("com.dylibso.chicory:runtime:latest.integration")
     implementation("com.dylibso.chicory:wasi:latest.integration")
@@ -38,7 +39,7 @@ dependencies {
 }
 
 tasks.compileJava {
-    // The Java `Cleaner` API requires at least Java 9
+    // The Java `UnixDomainSocketAddress` API requires at least Java 16
     options.release = 17
 }
 

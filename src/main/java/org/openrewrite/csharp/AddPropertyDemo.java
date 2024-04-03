@@ -31,8 +31,12 @@ import org.openrewrite.remote.properties.PropertiesReceiver;
 import org.openrewrite.remote.properties.PropertiesSender;
 
 import java.io.IOException;
-import java.net.Socket;
+import java.net.UnixDomainSocketAddress;
+import java.nio.channels.Channels;
+import java.nio.channels.SocketChannel;
+import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 public class AddPropertyDemo extends Recipe {
     @Override
@@ -56,17 +60,22 @@ public class AddPropertyDemo extends Recipe {
                     file = file.withMarkers(file.getMarkers().withMarkers(file.getMarkers().getMarkers().stream().filter(m -> m != recipesThatMadeChanges.get()).toList()));
                 }
                 Properties.File remoteState = ctx.getMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE");
-                try (Socket socket = new Socket("localhost", 5001)) {
-                    CountingOutputStream outputStream = new CountingOutputStream(socket.getOutputStream());
+                UnixDomainSocketAddress address = UnixDomainSocketAddress.of(Paths.get("/tmp/mysocket"));
+                try (SocketChannel socketChannel = SocketChannel.open(address)) {
+                    long t0 = System.nanoTime();
+                    CountingOutputStream outputStream = new CountingOutputStream(Channels.newOutputStream(socketChannel));
                     PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(outputStream)));
                     sender.send(file, remoteState);
-                    System.out.println("\nsent " + outputStream.getCount() + " bytes\n");
-                    socket.shutdownOutput();
+                    long t1 = System.nanoTime();
+                    socketChannel.shutdownOutput();
 
-                    CountingInputStream inputStream = new CountingInputStream(socket.getInputStream());
+                    long t2 = System.nanoTime();
+                    CountingInputStream inputStream = new CountingInputStream(Channels.newInputStream(socketChannel));
                     PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(inputStream)));
                     remoteState = (Properties.File) receiver.receive(file);
-                    System.out.println("\nreceived " + inputStream.getCount() + " bytes\n");
+                    long t3 = System.nanoTime();
+                    System.out.println("sent " + outputStream.getCount() + " bytes in " + TimeUnit.NANOSECONDS.toMillis(t1 - t0) + "ms / " +
+                                       "received " + inputStream.getCount() + " bytes in " + TimeUnit.NANOSECONDS.toMillis(t3 - t2) + "ms");
                     ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
                     return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
                 } catch (IOException e) {
