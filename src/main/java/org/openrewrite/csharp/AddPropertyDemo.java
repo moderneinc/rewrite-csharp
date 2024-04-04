@@ -261,6 +261,7 @@ public class AddPropertyDemo extends Recipe {
                         Path targetPath = workingDirectory.resolve(resourcePath);
                         OutputStream out = Files.newOutputStream(targetPath);
                         in.transferTo(out);
+                        targetPath.toFile().setExecutable(true);
                         return targetPath;
                     }
                 }
