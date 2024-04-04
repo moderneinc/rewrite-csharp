@@ -19,7 +19,9 @@ import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.dataformat.cbor.CBORGenerator;
 import com.fasterxml.jackson.dataformat.cbor.CBORParser;
 import lombok.EqualsAndHashCode;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import lombok.experimental.NonFinal;
 import org.jetbrains.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
@@ -34,20 +36,28 @@ import org.openrewrite.remote.ReceiverContext;
 import org.openrewrite.remote.SenderContext;
 import org.openrewrite.remote.properties.PropertiesReceiver;
 import org.openrewrite.remote.properties.PropertiesSender;
+import org.openrewrite.scheduling.WorkingDirectoryExecutionContextView;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.ref.Cleaner;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static java.util.Objects.requireNonNull;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -86,34 +96,34 @@ public class AddPropertyDemo extends Recipe {
     }
 
     private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
+        State state = State.create(this, ctx);
+        state.process();
+
         Optional<RecipesThatMadeChanges> recipesThatMadeChanges = file.getMarkers().findFirst(RecipesThatMadeChanges.class);
         if (recipesThatMadeChanges.isPresent()) {
             file = file.withMarkers(file.getMarkers().withMarkers(file.getMarkers().getMarkers().stream().filter(m -> m != recipesThatMadeChanges.get()).toList()));
         }
         Properties.File remoteState = ctx.getMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE");
-        remoteState = runRecipe0(file, remoteState, ctx);
+        if (remoteState != null && !remoteState.equals(file)) {
+            remoteState = null;
+        }
+        remoteState = runRecipe0(file, remoteState, state, ctx);
         ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
         return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
     }
 
-    private Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, ExecutionContext ctx) {
-//        long t0 = System.nanoTime();
-//        try {
+    private Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, State state, ExecutionContext ctx) {
         return customViaSocket(out -> {
             PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(out)));
             sender.send(file, remoteState);
         }, in -> {
             PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(in)));
             return (Properties.File) receiver.receive(file);
-        }, ctx);
-//        } finally {
-//            long t1 = System.nanoTime();
-//            System.out.println("Recipe took " + TimeUnit.NANOSECONDS.toMicros(t1 - t0) + "us");
-//        }
+        }, state, ctx);
     }
 
-    private Properties.File customViaSocket(Consumer<OutputStream> send, Function<InputStream, Properties.File> receive, ExecutionContext ctx) {
-        UnixDomainSocketAddress address = UnixDomainSocketAddress.of(Paths.get("/tmp/mysocket"));
+    private Properties.File customViaSocket(Consumer<OutputStream> send, Function<InputStream, Properties.File> receive, State state, ExecutionContext ctx) {
+        UnixDomainSocketAddress address = UnixDomainSocketAddress.of(state.getSocket());
         CBORFactory factory = new CBORFactory();
 
         Map<Object, Object> recipes = ctx.getMessage(AddPropertyDemo.class.getName() + ".RECIPES");
@@ -143,7 +153,6 @@ public class AddPropertyDemo extends Recipe {
                 generator.writeString(value);
                 generator.writeEndObject();
                 generator.flush();
-//                socketChannel.shutdownOutput();
                 CBORParser parser = factory.createParser(inputStream);
                 parser.nextToken();
                 recipes.put(this, parser.getIntValue());
@@ -152,6 +161,7 @@ public class AddPropertyDemo extends Recipe {
             }
         }
 
+        long startNanos = System.nanoTime();
         int recipeId = (int) recipes.get(this);
         try (SocketChannel socketChannel = SocketChannel.open(address)) {
             OutputStream outputStream = Channels.newOutputStream(socketChannel);
@@ -161,15 +171,99 @@ public class AddPropertyDemo extends Recipe {
             generator.flush();
             InputStream inputStream = Channels.newInputStream(socketChannel);
             send.accept(outputStream);
-            socketChannel.shutdownOutput();
             return receive.apply(inputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } finally {
+            long nanos = System.nanoTime() - startNanos;
+            System.out.println("Recipe " + recipeId + " took " + TimeUnit.NANOSECONDS.toMicros(nanos) + "us");
         }
     }
 
     @Override
     public int maxCycles() {
         return 1;
+    }
+
+    @Value
+    @RequiredArgsConstructor
+    private static class State {
+        Path executable;
+        Path socket;
+        @NonFinal
+        boolean started;
+
+        public static State create(Recipe recipe, ExecutionContext ctx) {
+            State state = ctx.getMessage(AddPropertyDemo.class.getName());
+            if (state == null) {
+                Path workingDirectory = WorkingDirectoryExecutionContextView.view(ctx).getWorkingDirectory();
+                Path path = Paths.get("/tmp/my.sock");
+                if (!Files.exists(path)) {
+                    path = Paths.get("/tmp").resolve(UUID.randomUUID() + ".sock");
+                }
+                State finalState = new State(installExecutable("Rewrite.Properties", workingDirectory), path);
+                ctx.putMessage(AddPropertyDemo.class.getName(), finalState);
+//                Runtime.getRuntime().addShutdownHook(new Thread(finalState::close));
+                state = finalState;
+            }
+
+            return state;
+        }
+
+        public void process() {
+            if (started) {
+                return;
+            } else if (Files.exists(socket)) {
+                UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socket);
+                try (var channel = SocketChannel.open(address)) {
+                    CBORGenerator generator = new CBORFactory().createGenerator(Channels.newOutputStream(channel));
+                    generator.writeString("hello");
+                    generator.flush();
+                    started = true;
+                } catch (IOException e) {
+                    try {
+                        Files.delete(socket);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+                if (started) {
+                    return;
+                }
+            }
+            try {
+                Process process = new ProcessBuilder().command(executable.toString(), socket.toString()).start();
+                started = true;
+                // not working
+                cleaner.register(this, process::destroy);
+                while (!Files.exists(socket)) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private static Path installExecutable(String resourcePath, Path workingDirectory) {
+            try {
+                Path devTimePath = Paths.get("src/main/resources/" + resourcePath);
+                if (Files.exists(devTimePath)) {
+                    return devTimePath;
+                } else {
+                    try (InputStream in = requireNonNull(AddPropertyDemo.class.getClassLoader().getResourceAsStream(resourcePath))) {
+                        Path targetPath = workingDirectory.resolve(resourcePath);
+                        OutputStream out = Files.newOutputStream(targetPath);
+                        in.transferTo(out);
+                        return targetPath;
+                    }
+                }
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
     }
 }
