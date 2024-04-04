@@ -27,14 +27,14 @@ class AddPropertyDemoTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new AddPropertyDemo());
+        spec.recipe(new AddPropertyDemo("from_csharp0", "new_value0"));
     }
 
     @Test
     void none() {
         rewriteRun(
+          //language=properties
           properties(
-            //language=properties
             """
               #foobar
               """,
@@ -49,16 +49,11 @@ class AddPropertyDemoTest implements RewriteTest {
     @Test
     void existing() {
         rewriteRun(
+          //language=properties
           properties(
-            //language=properties
             """
               #foobar
               from_csharp0 = new_value0
-              """,
-            """
-              #foobar
-              from_csharp0 = new_value0
-              from_csharp1 = new_value1
               """
           )
         );
@@ -75,16 +70,22 @@ class AddPropertyDemoTest implements RewriteTest {
               name: test.recipe
               displayName: Test Recipe
               recipeList:
-                - org.openrewrite.csharp.AddPropertyDemo
+                - org.openrewrite.csharp.AddPropertyDemo:
+                    property: from_csharp0
+                    value: new_value0
                 - org.openrewrite.properties.ChangePropertyValue:
                     propertyKey: from_csharp0
                     newValue: modified_by_java
-                - org.openrewrite.csharp.AddPropertyDemo
-                - org.openrewrite.csharp.AddPropertyDemo
+                - org.openrewrite.csharp.AddPropertyDemo:
+                    property: from_csharp1
+                    value: new_value1
+                - org.openrewrite.csharp.AddPropertyDemo:
+                    property: from_csharp2
+                    value: new_value2
               """, "test.recipe"
           ),
+          //language=properties
           properties(
-            //language=properties
             """
               #foobar
               existing = value

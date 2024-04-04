@@ -15,23 +15,14 @@
  */
 package org.openrewrite.csharp;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.channel.*;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollDomainSocketChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.kqueue.KQueue;
-import io.netty.channel.kqueue.KQueueDomainSocketChannel;
-import io.netty.channel.kqueue.KQueueEventLoopGroup;
-import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.channel.unix.DomainSocketChannel;
-import io.netty.handler.codec.http.*;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Promise;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import com.fasterxml.jackson.dataformat.cbor.CBORGenerator;
+import com.fasterxml.jackson.dataformat.cbor.CBORParser;
+import lombok.EqualsAndHashCode;
+import lombok.Value;
 import org.jetbrains.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.marker.RecipesThatMadeChanges;
@@ -52,14 +43,26 @@ import java.net.UnixDomainSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+@Value
+@EqualsAndHashCode(callSuper = false)
 public class AddPropertyDemo extends Recipe {
 
     private static final Cleaner cleaner = Cleaner.create();
+
+    @Option(displayName = "Property key",
+            description = "The property key to add.",
+            example = "management.metrics.enable.process.files")
+    String property;
+
+    @Option(displayName = "Property value",
+            description = "The value of the new property key.")
+    String value;
 
     @Override
     public String getDisplayName() {
@@ -82,7 +85,7 @@ public class AddPropertyDemo extends Recipe {
         };
     }
 
-    private static Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
+    private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
         Optional<RecipesThatMadeChanges> recipesThatMadeChanges = file.getMarkers().findFirst(RecipesThatMadeChanges.class);
         if (recipesThatMadeChanges.isPresent()) {
             file = file.withMarkers(file.getMarkers().withMarkers(file.getMarkers().getMarkers().stream().filter(m -> m != recipesThatMadeChanges.get()).toList()));
@@ -93,10 +96,10 @@ public class AddPropertyDemo extends Recipe {
         return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
     }
 
-    private static Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, ExecutionContext ctx) {
+    private Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, ExecutionContext ctx) {
 //        long t0 = System.nanoTime();
 //        try {
-        return httpViaSocket(out -> {
+        return customViaSocket(out -> {
             PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(out)));
             sender.send(file, remoteState);
         }, in -> {
@@ -109,118 +112,59 @@ public class AddPropertyDemo extends Recipe {
 //        }
     }
 
-    private static Properties.File customViaSocket(Consumer<OutputStream> send, Function<InputStream, Properties.File> receive, ExecutionContext ignore) {
+    private Properties.File customViaSocket(Consumer<OutputStream> send, Function<InputStream, Properties.File> receive, ExecutionContext ctx) {
         UnixDomainSocketAddress address = UnixDomainSocketAddress.of(Paths.get("/tmp/mysocket"));
+        CBORFactory factory = new CBORFactory();
+
+        Map<Object, Object> recipes = ctx.getMessage(AddPropertyDemo.class.getName() + ".RECIPES");
+        if (recipes == null) {
+            recipes = new HashMap<>();
+            ctx.putMessage(AddPropertyDemo.class.getName() + ".RECIPES", recipes);
+            try (SocketChannel socketChannel = SocketChannel.open(address)) {
+                OutputStream outputStream = Channels.newOutputStream(socketChannel);
+                CBORGenerator generator = factory.createGenerator(outputStream);
+                generator.writeString("reset");
+                generator.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if (!recipes.containsKey(this)) {
+            try (SocketChannel socketChannel = SocketChannel.open(address)) {
+                OutputStream outputStream = Channels.newOutputStream(socketChannel);
+                InputStream inputStream = Channels.newInputStream(socketChannel);
+                CBORGenerator generator = factory.createGenerator(outputStream);
+                generator.writeString("load-recipe");
+                generator.writeString("Rewrite.Properties.AddProperty");
+                generator.writeStartObject();
+                generator.writeFieldName("property");
+                generator.writeString(property);
+                generator.writeFieldName("value");
+                generator.writeString(value);
+                generator.writeEndObject();
+                generator.flush();
+//                socketChannel.shutdownOutput();
+                CBORParser parser = factory.createParser(inputStream);
+                com.fasterxml.jackson.core.JsonToken token = parser.nextToken();
+                recipes.put(this, parser.getIntValue());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        int recipeId = (int) recipes.get(this);
         try (SocketChannel socketChannel = SocketChannel.open(address)) {
             OutputStream outputStream = Channels.newOutputStream(socketChannel);
+            CBORGenerator generator = factory.createGenerator(outputStream);
+            generator.writeString("run-recipe");
+            generator.writeNumber(recipeId);
+            generator.flush();
             InputStream inputStream = Channels.newInputStream(socketChannel);
             send.accept(outputStream);
             socketChannel.shutdownOutput();
             return receive.apply(inputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private static Properties.File httpViaSocket(Consumer<OutputStream> send, Function<InputStream, Properties.File> receive, ExecutionContext ctx) {
-        try {
-            DomainSocketChannel ch = getChannel(ctx);
-
-            // Prepare HTTP POST Request
-            final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                    HttpMethod.POST, "/run-recipe");
-
-            // Add Headers
-            request.headers().set(HttpHeaderNames.HOST, "localhost");
-//            request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-            request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
-//            request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
-
-            try (ByteBufOutputStream bbos = new ByteBufOutputStream(request.content())) {
-                send.accept(bbos);
-                bbos.flush();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            HttpUtil.setContentLength(request, request.content().readableBytes());
-
-            // Make the request
-            Promise<Properties.File> result = ch.eventLoop().newPromise();
-            ch.writeAndFlush(request).addListener(f -> {
-                if (f.isSuccess()) {
-                    ch.<Consumer<FullHttpResponse>>attr(AttributeKey.valueOf("handler")).set(msg -> {
-                        if (msg.status().equals(HttpResponseStatus.OK)) {
-                            try (ByteBufInputStream in = new ByteBufInputStream(msg.content())) {
-                                result.setSuccess(receive.apply(in));
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        } else {
-                            result.setFailure(new RuntimeException("Unexpected response: " + msg.status()));
-                        }
-                    });
-                }
-            }).sync();
-
-            return result.sync().get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static DomainSocketChannel getChannel(ExecutionContext ctx) throws InterruptedException {
-        DomainSocketChannel channel = ctx.getMessage(AddPropertyDemo.class.getName() + ".CHANNEL");
-        if (channel != null) {
-            return channel;
-        }
-
-        DomainSocketAddress domainSocketAddress = new DomainSocketAddress("/tmp/mysocket");
-        EventLoopGroup group = createEventLoopGroup();
-
-        Bootstrap b = new Bootstrap();
-
-        b.group(group)
-                .channel(getChannelClass())
-                .handler(new ChannelInitializer<>() {
-
-                    @Override
-                    public void initChannel(final Channel ch) {
-                        ch.pipeline()
-                                .addLast(new HttpClientCodec())
-                                .addLast(new HttpObjectAggregator(Short.MAX_VALUE))
-//                                    .addLast(new LoggingHandler(LogLevel.INFO))
-                                .addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
-                                    @Override
-                                    protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-                                        ctx.channel().<Consumer<FullHttpResponse>>attr(AttributeKey.valueOf("handler")).get().accept(msg);
-                                    }
-                                });
-                    }
-                });
-        channel = (DomainSocketChannel) b.connect(domainSocketAddress).sync().channel();
-        ctx.putMessage(AddPropertyDemo.class.getName() + ".CHANNEL", channel);
-        cleaner.register(ctx, group::shutdownGracefully);
-
-        return channel;
-    }
-
-    private static Class<? extends DomainSocketChannel> getChannelClass() {
-        if (KQueue.isAvailable()) {
-            return KQueueDomainSocketChannel.class;
-        } else if (Epoll.isAvailable()) {
-            return EpollDomainSocketChannel.class;
-        } else {
-            throw new IllegalStateException("Unsupported platform");
-        }
-    }
-
-    private static EventLoopGroup createEventLoopGroup() {
-        if (KQueue.isAvailable()) {
-            return new KQueueEventLoopGroup();
-        } else if (Epoll.isAvailable()) {
-            return new EpollEventLoopGroup();
-        } else {
-            throw new IllegalStateException("Unsupported platform");
         }
     }
 

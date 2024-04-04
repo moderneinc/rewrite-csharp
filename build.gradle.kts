@@ -28,8 +28,9 @@ dependencies {
     implementation("org.extism.sdk:extism:latest.integration")
 //    implementation("org.extism:chicory-sdk:latest.integration")
     implementation("io.github.kawamuray.wasmtime:wasmtime-java:latest.integration")
-    implementation("io.netty:netty-all:4.1.108.Final")
-    implementation("io.netty:netty-transport-native-kqueue:4.1.108.Final")
+    implementation("com.fasterxml.jackson.core:jackson-core")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
+
 
     testImplementation("org.assertj:assertj-core:latest.release")
     testImplementation("org.junit.jupiter:junit-jupiter-api:latest.release")
