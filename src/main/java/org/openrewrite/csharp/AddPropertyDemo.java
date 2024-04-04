@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
-import java.lang.ref.Cleaner;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
@@ -63,7 +62,7 @@ import static java.util.Objects.requireNonNull;
 @EqualsAndHashCode(callSuper = false)
 public class AddPropertyDemo extends Recipe {
 
-    private static final Cleaner cleaner = Cleaner.create();
+//    private static final Cleaner cleaner = Cleaner.create();
 
     @Option(displayName = "Property key",
             description = "The property key to add.",
@@ -201,7 +200,7 @@ public class AddPropertyDemo extends Recipe {
                 if (!Files.exists(path)) {
                     path = Paths.get("/tmp").resolve(UUID.randomUUID() + ".sock");
                 }
-                State finalState = new State(installExecutable("Rewrite.Properties", workingDirectory), path);
+                State finalState = new State(installExecutable("demo", workingDirectory), path);
                 ctx.putMessage(AddPropertyDemo.class.getName(), finalState);
 //                Runtime.getRuntime().addShutdownHook(new Thread(finalState::close));
                 state = finalState;
@@ -233,10 +232,14 @@ public class AddPropertyDemo extends Recipe {
             }
             try {
                 Process process = new ProcessBuilder().command(executable.toString(), socket.toString()).start();
-                started = true;
+                started = process.isAlive() || process.exitValue() == 0;
                 // not working
-                cleaner.register(this, process::destroy);
+//                cleaner.register(this, process::destroy);
                 while (!Files.exists(socket)) {
+                    if (!process.isAlive() || process.exitValue() != 0) {
+                        started = false;
+                        throw new RuntimeException("Failed to start process: " + process.exitValue());
+                    }
                     try {
                         Thread.sleep(1);
                     } catch (InterruptedException e) {
