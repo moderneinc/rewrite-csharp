@@ -66,12 +66,12 @@ public class AddPropertyDemo extends Recipe {
 
     @Override
     public String getDisplayName() {
-        return "Demo recipe adding a `from_csharp<n>` property to any given `.properties` file";
+        return "Demo recipe adding a property to a `.properties` file using a C# recipe";
     }
 
     @Override
     public String getDescription() {
-        return "Adds a new `from_csharp<n>` property to any given `.properties` file where `n` corresponds to the count of existing entries matching that name.\n\n" +
+        return "Demonstrates how to add a property to a `.properties` file using a C# recipe.\n\n" +
                "The actual recipe being executed is implemented in C# and is running in a separate process.";
     }
 
@@ -145,7 +145,7 @@ public class AddPropertyDemo extends Recipe {
                 generator.flush();
 //                socketChannel.shutdownOutput();
                 CBORParser parser = factory.createParser(inputStream);
-                com.fasterxml.jackson.core.JsonToken token = parser.nextToken();
+                parser.nextToken();
                 recipes.put(this, parser.getIntValue());
             } catch (IOException e) {
                 throw new RuntimeException(e);
