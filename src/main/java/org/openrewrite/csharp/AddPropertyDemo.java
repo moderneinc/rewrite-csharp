@@ -48,6 +48,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -259,9 +260,10 @@ public class AddPropertyDemo extends Recipe {
                 } else {
                     try (InputStream in = requireNonNull(AddPropertyDemo.class.getClassLoader().getResourceAsStream(resourcePath))) {
                         Path targetPath = workingDirectory.resolve(resourcePath);
-                        OutputStream out = Files.newOutputStream(targetPath);
-                        in.transferTo(out);
-                        targetPath.toFile().setExecutable(true);
+                        try (OutputStream out = Files.newOutputStream(targetPath)) {
+                            in.transferTo(out);
+                        }
+                        Files.setPosixFilePermissions(targetPath, PosixFilePermissions.fromString("rwxr-xr-x"));
                         return targetPath;
                     }
                 }
