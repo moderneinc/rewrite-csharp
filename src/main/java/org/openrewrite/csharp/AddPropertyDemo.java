@@ -233,13 +233,15 @@ public class AddPropertyDemo extends Recipe {
             }
             try {
                 Process process = new ProcessBuilder().command(executable.toString(), socket.toString()).start();
-                // not working
-//                cleaner.register(this, process::destroy);
+                long timeout = System.currentTimeMillis() + 5_000;
                 while (!Files.exists(socket)) {
                     try {
                         Thread.sleep(5);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
+                    }
+                    if (System.currentTimeMillis() > timeout) {
+                        throw new RuntimeException("Failed to start process within 5 seconds: " + executable);
                     }
                     if (!process.isAlive()) {
                         started = false;
