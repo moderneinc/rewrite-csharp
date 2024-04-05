@@ -16,11 +16,13 @@
 package org.openrewrite.csharp;
 
 import lombok.EqualsAndHashCode;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
+import org.openrewrite.config.OptionDescriptor;
 import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.properties.PropertiesIsoVisitor;
 import org.openrewrite.properties.tree.Properties;
@@ -31,11 +33,12 @@ import org.openrewrite.remote.SenderContext;
 import org.openrewrite.remote.properties.PropertiesReceiver;
 import org.openrewrite.remote.properties.PropertiesSender;
 
+import java.util.List;
+
 @Value
 @EqualsAndHashCode(callSuper = false)
+@RequiredArgsConstructor
 public class AddPropertyDemo extends Recipe {
-
-//    private static final Cleaner cleaner = Cleaner.create();
 
     @Option(displayName = "Property key",
             description = "The property key to add.",
@@ -80,8 +83,19 @@ public class AddPropertyDemo extends Recipe {
 
     private RecipeDescriptor getRemoteDescriptor() {
         RecipeDescriptor descriptor = getDescriptor();
+        List<OptionDescriptor> options = descriptor.getOptions().stream().map(o -> {
+            Object optionValue;
+            if (o.getName().equals("property")) {
+                optionValue = property;
+            } else if (o.getName().equals("value")) {
+                optionValue = value;
+            } else {
+                optionValue = o.getValue();
+            }
+            return new OptionDescriptor(o.getName(), o.getType(), o.getDisplayName(), o.getDescription(), o.getExample(), o.getValid(), o.isRequired(), optionValue);
+        }).toList();
         return new RecipeDescriptor("Rewrite.Properties.AddProperty", descriptor.getDisplayName(), descriptor.getDescription(), descriptor.getTags(),
-                descriptor.getEstimatedEffortPerOccurrence(), descriptor.getOptions(), descriptor.getRecipeList(), descriptor.getDataTables(),
+                descriptor.getEstimatedEffortPerOccurrence(), options, descriptor.getRecipeList(), descriptor.getDataTables(),
                 descriptor.getMaintainers(), descriptor.getContributors(), descriptor.getExamples(), descriptor.getSource());
     }
 
