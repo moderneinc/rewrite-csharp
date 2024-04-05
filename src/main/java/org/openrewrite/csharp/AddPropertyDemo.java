@@ -73,8 +73,8 @@ public class AddPropertyDemo extends Recipe {
         return remotingClient.runRecipe(getRemoteDescriptor(), file, (out, before) -> {
             PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(out)));
             sender.send(file, before);
-        }, in -> {
-            PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(in)));
+        }, jsonReceiver -> {
+            PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(jsonReceiver));
             return (Properties.File) receiver.receive(file);
         });
     }
