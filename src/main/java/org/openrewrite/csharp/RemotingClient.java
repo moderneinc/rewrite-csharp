@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.cbor.CBORParser;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.experimental.NonFinal;
+import org.jetbrains.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.SourceFile;
 import org.openrewrite.config.OptionDescriptor;
@@ -27,7 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -41,6 +42,9 @@ class RemotingClient {
     Map<RecipeDescriptor, Integer> recipes = new HashMap<>();
     @NonFinal
     boolean started;
+    @NonFinal
+    @Nullable
+    SourceFile remoteState;
 
     public static RemotingClient create(ExecutionContext ctx) {
         RemotingClient remotingClient = ctx.getMessage(AddPropertyDemo.class.getName());
@@ -64,7 +68,7 @@ class RemotingClient {
         return os.contains("mac") ? "demo.osx" : "demo.linux";
     }
 
-    public void start() {
+    private void ensureStarted() {
         if (started || (Files.exists(socket.getPath()) && (started = hello()))) {
             return;
         }
@@ -73,7 +77,7 @@ class RemotingClient {
             long timeout = System.currentTimeMillis() + 5_000;
             while (!(started = hello()) && System.currentTimeMillis() < timeout) {
                 try {
-                    Thread.sleep(5);
+                    Thread.sleep(10);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -83,7 +87,10 @@ class RemotingClient {
         }
     }
 
-    public boolean hello() {
+    private boolean hello() {
+        if (!Files.exists(socket.getPath())) {
+            return false;
+        }
         try (var channel = SocketChannel.open(socket)) {
             CBORGenerator generator = factory.createGenerator(Channels.newOutputStream(channel));
             generator.writeString("hello");
@@ -94,7 +101,7 @@ class RemotingClient {
         }
     }
 
-    public void reset() {
+    private void reset() {
         try (SocketChannel socketChannel = SocketChannel.open(socket)) {
             OutputStream outputStream = Channels.newOutputStream(socketChannel);
             CBORGenerator generator = factory.createGenerator(outputStream);
@@ -154,7 +161,16 @@ class RemotingClient {
         return recipes.get(recipe);
     }
 
-    public <T extends SourceFile> T runRecipe(RecipeDescriptor recipe, Consumer<OutputStream> send, Function<InputStream, T> receive) {
+    public <T extends SourceFile> T runRecipe(RecipeDescriptor recipe, T sourceFile, BiConsumer<OutputStream, T> send, Function<InputStream, T> receive) {
+        ensureStarted();
+        if (remoteState != null && !remoteState.equals(sourceFile)) {
+            remoteState = null;
+        }
+        remoteState = runRecipe0(recipe, send, receive);
+        return (T) remoteState;
+    }
+
+    private <T extends SourceFile> T runRecipe0(RecipeDescriptor recipe, BiConsumer<OutputStream, T> send, Function<InputStream, T> receive) {
         int recipeId = loadRecipe(recipe);
         try (SocketChannel socketChannel = SocketChannel.open(socket)) {
             OutputStream outputStream = Channels.newOutputStream(socketChannel);
@@ -163,11 +179,10 @@ class RemotingClient {
             generator.writeNumber(recipeId);
             generator.flush();
             InputStream inputStream = Channels.newInputStream(socketChannel);
-            send.accept(outputStream);
+            send.accept(outputStream, (T) remoteState);
             return receive.apply(inputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 }

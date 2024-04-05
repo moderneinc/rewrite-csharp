@@ -17,7 +17,6 @@ package org.openrewrite.csharp;
 
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import org.jetbrains.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Recipe;
@@ -70,21 +69,9 @@ public class AddPropertyDemo extends Recipe {
 
     private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
         RemotingClient remotingClient = RemotingClient.create(ctx);
-        remotingClient.start();
-
-        Properties.File remoteState = ctx.getMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE");
-        if (remoteState != null && !remoteState.equals(file)) {
-            remoteState = null;
-        }
-        remoteState = runRecipe0(file, remoteState, remotingClient);
-        ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
-        return remoteState;
-    }
-
-    private Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, RemotingClient remotingClient) {
-        return remotingClient.runRecipe(getRemoteDescriptor(), out -> {
+        return remotingClient.runRecipe(getRemoteDescriptor(), file, (out, before) -> {
             PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(out)));
-            sender.send(file, remoteState);
+            sender.send(file, before);
         }, in -> {
             PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(in)));
             return (Properties.File) receiver.receive(file);
