@@ -26,13 +26,11 @@ import org.openrewrite.config.OptionDescriptor;
 import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.properties.PropertiesIsoVisitor;
 import org.openrewrite.properties.tree.Properties;
-import org.openrewrite.remote.JsonReceiver;
-import org.openrewrite.remote.JsonSender;
-import org.openrewrite.remote.ReceiverContext;
-import org.openrewrite.remote.SenderContext;
+import org.openrewrite.remote.*;
 import org.openrewrite.remote.properties.PropertiesReceiver;
 import org.openrewrite.remote.properties.PropertiesSender;
 
+import java.nio.file.Paths;
 import java.util.List;
 
 @Value
@@ -71,13 +69,20 @@ public class AddPropertyDemo extends Recipe {
     }
 
     private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
-        RemotingClient remotingClient = RemotingClient.create(ctx);
+        RemotingClient remotingClient = getRemotingClient(ctx);
         return remotingClient.runRecipe(getRemoteDescriptor(), file, (out, before) -> {
             PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(out)));
             sender.send(file, before);
         }, in -> {
             PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(in)));
             return (Properties.File) receiver.receive(file);
+        });
+    }
+
+    private static RemotingClient getRemotingClient(ExecutionContext ctx) {
+        return RemotingClient.create(ctx, () -> {
+            String os = System.getProperty("os.name").toLowerCase();
+            return RemotingClient.getExecutable(Paths.get(os.contains("mac") ? "demo.osx" : "demo.linux"), AddPropertyDemo.class.getClassLoader(), null);
         });
     }
 
