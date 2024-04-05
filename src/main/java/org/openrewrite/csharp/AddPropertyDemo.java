@@ -53,7 +53,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -96,8 +95,8 @@ public class AddPropertyDemo extends Recipe {
     }
 
     private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
-        State state = State.create(this, ctx);
-        state.process();
+        RemotingClient remotingClient = RemotingClient.create(this, ctx);
+        remotingClient.process();
 
         Optional<RecipesThatMadeChanges> recipesThatMadeChanges = file.getMarkers().findFirst(RecipesThatMadeChanges.class);
         if (recipesThatMadeChanges.isPresent()) {
@@ -107,23 +106,23 @@ public class AddPropertyDemo extends Recipe {
         if (remoteState != null && !remoteState.equals(file)) {
             remoteState = null;
         }
-        remoteState = runRecipe0(file, remoteState, state, ctx);
+        remoteState = runRecipe0(file, remoteState, remotingClient, ctx);
         ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
         return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
     }
 
-    private Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, State state, ExecutionContext ctx) {
+    private Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, RemotingClient remotingClient, ExecutionContext ctx) {
         return customViaSocket(out -> {
             PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(out)));
             sender.send(file, remoteState);
         }, in -> {
             PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(in)));
             return (Properties.File) receiver.receive(file);
-        }, state, ctx);
+        }, remotingClient, ctx);
     }
 
-    private Properties.File customViaSocket(Consumer<OutputStream> send, Function<InputStream, Properties.File> receive, State state, ExecutionContext ctx) {
-        UnixDomainSocketAddress address = UnixDomainSocketAddress.of(state.getSocket());
+    private Properties.File customViaSocket(Consumer<OutputStream> send, Function<InputStream, Properties.File> receive, RemotingClient remotingClient, ExecutionContext ctx) {
+        UnixDomainSocketAddress address = UnixDomainSocketAddress.of(remotingClient.getSocket());
         CBORFactory factory = new CBORFactory();
 
         Map<Object, Object> recipes = ctx.getMessage(AddPropertyDemo.class.getName() + ".RECIPES");
@@ -161,7 +160,6 @@ public class AddPropertyDemo extends Recipe {
             }
         }
 
-        long startNanos = System.nanoTime();
         int recipeId = (int) recipes.get(this);
         try (SocketChannel socketChannel = SocketChannel.open(address)) {
             OutputStream outputStream = Channels.newOutputStream(socketChannel);
@@ -174,9 +172,6 @@ public class AddPropertyDemo extends Recipe {
             return receive.apply(inputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } finally {
-            long nanos = System.nanoTime() - startNanos;
-            System.out.println("Recipe " + recipeId + " took " + TimeUnit.NANOSECONDS.toMicros(nanos) + "us");
         }
     }
 
@@ -187,70 +182,57 @@ public class AddPropertyDemo extends Recipe {
 
     @Value
     @RequiredArgsConstructor
-    private static class State {
+    private static class RemotingClient {
         Path executable;
         Path socket;
         @NonFinal
         boolean started;
 
-        public static State create(Recipe recipe, ExecutionContext ctx) {
-            State state = ctx.getMessage(AddPropertyDemo.class.getName());
-            if (state == null) {
+        public static RemotingClient create(Recipe recipe, ExecutionContext ctx) {
+            RemotingClient remotingClient = ctx.getMessage(AddPropertyDemo.class.getName());
+            if (remotingClient == null) {
                 Path workingDirectory = WorkingDirectoryExecutionContextView.view(ctx).getWorkingDirectory();
                 Path path = Paths.get("/tmp/my.sock");
                 if (!Files.exists(path)) {
                     path = Paths.get("/tmp").resolve(UUID.randomUUID() + ".sock");
                 }
-                State finalState = new State(installExecutable("demo", workingDirectory), path);
-                ctx.putMessage(AddPropertyDemo.class.getName(), finalState);
+                RemotingClient finalRemotingClient = new RemotingClient(installExecutable("demo", workingDirectory), path);
+                ctx.putMessage(AddPropertyDemo.class.getName(), finalRemotingClient);
 //                Runtime.getRuntime().addShutdownHook(new Thread(finalState::close));
-                state = finalState;
+                remotingClient = finalRemotingClient;
             }
 
-            return state;
+            return remotingClient;
         }
 
         public void process() {
-            if (started) {
+            if (started || (Files.exists(socket) && (started = hello()))) {
                 return;
-            } else if (Files.exists(socket)) {
-                UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socket);
-                try (var channel = SocketChannel.open(address)) {
-                    CBORGenerator generator = new CBORFactory().createGenerator(Channels.newOutputStream(channel));
-                    generator.writeString("hello");
-                    generator.flush();
-                    started = true;
-                } catch (IOException e) {
-                    try {
-                        Files.delete(socket);
-                    } catch (IOException ex) {
-                        throw new RuntimeException(ex);
-                    }
-                }
-                if (started) {
-                    return;
-                }
             }
             try {
-                Process process = new ProcessBuilder().command(executable.toString(), socket.toString()).start();
+                new ProcessBuilder().command(executable.toString(), socket.toString()).start();
                 long timeout = System.currentTimeMillis() + 5_000;
-                while (!Files.exists(socket)) {
+                while (!(started = hello()) && System.currentTimeMillis() < timeout) {
                     try {
                         Thread.sleep(5);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                    if (System.currentTimeMillis() > timeout) {
-                        throw new RuntimeException("Failed to start process within 5 seconds: " + executable);
-                    }
-                    if (!process.isAlive()) {
-                        started = false;
-                        throw new RuntimeException("Failed to start process: " + executable);
-                    }
                 }
-                started = true;
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            }
+        }
+
+        public boolean hello() {
+            UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socket);
+            try (var channel = SocketChannel.open(address)) {
+                CBORGenerator generator = new CBORFactory().createGenerator(Channels.newOutputStream(channel));
+                generator.writeString("hello");
+                generator.flush();
+                return true;
+            } catch (IOException e) {
+                return false;
             }
         }
 
