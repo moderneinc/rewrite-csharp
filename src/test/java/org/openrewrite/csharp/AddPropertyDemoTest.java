@@ -62,7 +62,7 @@ class AddPropertyDemoTest implements RewriteTest {
     @Test
     void multiple() {
         rewriteRun(
-          spec -> spec.recipeFromYaml(
+          spec -> spec.cycles(1).expectedCyclesThatMakeChanges(1).recipeFromYaml(
             //language=yaml
             """
               ---

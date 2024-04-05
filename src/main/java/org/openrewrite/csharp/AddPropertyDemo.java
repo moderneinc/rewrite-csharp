@@ -15,19 +15,14 @@
  */
 package org.openrewrite.csharp;
 
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import com.fasterxml.jackson.dataformat.cbor.CBORGenerator;
-import com.fasterxml.jackson.dataformat.cbor.CBORParser;
 import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 import lombok.Value;
-import lombok.experimental.NonFinal;
 import org.jetbrains.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
-import org.openrewrite.marker.RecipesThatMadeChanges;
+import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.properties.PropertiesIsoVisitor;
 import org.openrewrite.properties.tree.Properties;
 import org.openrewrite.remote.JsonReceiver;
@@ -36,27 +31,6 @@ import org.openrewrite.remote.ReceiverContext;
 import org.openrewrite.remote.SenderContext;
 import org.openrewrite.remote.properties.PropertiesReceiver;
 import org.openrewrite.remote.properties.PropertiesSender;
-import org.openrewrite.scheduling.WorkingDirectoryExecutionContextView;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.UncheckedIOException;
-import java.net.UnixDomainSocketAddress;
-import java.nio.channels.Channels;
-import java.nio.channels.SocketChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static java.util.Objects.requireNonNull;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -95,165 +69,33 @@ public class AddPropertyDemo extends Recipe {
     }
 
     private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
-        RemotingClient remotingClient = RemotingClient.create(this, ctx);
-        remotingClient.process();
+        RemotingClient remotingClient = RemotingClient.create(ctx);
+        remotingClient.start();
 
-        Optional<RecipesThatMadeChanges> recipesThatMadeChanges = file.getMarkers().findFirst(RecipesThatMadeChanges.class);
-        if (recipesThatMadeChanges.isPresent()) {
-            file = file.withMarkers(file.getMarkers().withMarkers(file.getMarkers().getMarkers().stream().filter(m -> m != recipesThatMadeChanges.get()).toList()));
-        }
         Properties.File remoteState = ctx.getMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE");
         if (remoteState != null && !remoteState.equals(file)) {
             remoteState = null;
         }
-        remoteState = runRecipe0(file, remoteState, remotingClient, ctx);
+        remoteState = runRecipe0(file, remoteState, remotingClient);
         ctx.putMessage(AddPropertyDemo.class.getName() + ".REMOTE_STATE", remoteState);
-        return recipesThatMadeChanges.isPresent() ? remoteState.withMarkers(remoteState.getMarkers().add(recipesThatMadeChanges.get())) : remoteState;
+        return remoteState;
     }
 
-    private Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, RemotingClient remotingClient, ExecutionContext ctx) {
-        return customViaSocket(out -> {
+    private Properties.File runRecipe0(Properties.File file, @Nullable Properties.File remoteState, RemotingClient remotingClient) {
+        return remotingClient.runRecipe(getRemoteDescriptor(), out -> {
             PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(out)));
             sender.send(file, remoteState);
         }, in -> {
             PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(new JsonReceiver(in)));
             return (Properties.File) receiver.receive(file);
-        }, remotingClient, ctx);
+        });
     }
 
-    private Properties.File customViaSocket(Consumer<OutputStream> send, Function<InputStream, Properties.File> receive, RemotingClient remotingClient, ExecutionContext ctx) {
-        UnixDomainSocketAddress address = UnixDomainSocketAddress.of(remotingClient.getSocket());
-        CBORFactory factory = new CBORFactory();
-
-        Map<Object, Object> recipes = ctx.getMessage(AddPropertyDemo.class.getName() + ".RECIPES");
-        if (recipes == null) {
-            recipes = new HashMap<>();
-            ctx.putMessage(AddPropertyDemo.class.getName() + ".RECIPES", recipes);
-            try (SocketChannel socketChannel = SocketChannel.open(address)) {
-                OutputStream outputStream = Channels.newOutputStream(socketChannel);
-                CBORGenerator generator = factory.createGenerator(outputStream);
-                generator.writeString("reset");
-                generator.flush();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        if (!recipes.containsKey(this)) {
-            try (SocketChannel socketChannel = SocketChannel.open(address)) {
-                OutputStream outputStream = Channels.newOutputStream(socketChannel);
-                InputStream inputStream = Channels.newInputStream(socketChannel);
-                CBORGenerator generator = factory.createGenerator(outputStream);
-                generator.writeString("load-recipe");
-                generator.writeString("Rewrite.Properties.AddProperty");
-                generator.writeStartObject();
-                generator.writeFieldName("property");
-                generator.writeString(property);
-                generator.writeFieldName("value");
-                generator.writeString(value);
-                generator.writeEndObject();
-                generator.flush();
-                CBORParser parser = factory.createParser(inputStream);
-                parser.nextToken();
-                recipes.put(this, parser.getIntValue());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        int recipeId = (int) recipes.get(this);
-        try (SocketChannel socketChannel = SocketChannel.open(address)) {
-            OutputStream outputStream = Channels.newOutputStream(socketChannel);
-            CBORGenerator generator = factory.createGenerator(outputStream);
-            generator.writeString("run-recipe");
-            generator.writeNumber(recipeId);
-            generator.flush();
-            InputStream inputStream = Channels.newInputStream(socketChannel);
-            send.accept(outputStream);
-            return receive.apply(inputStream);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    private RecipeDescriptor getRemoteDescriptor() {
+        RecipeDescriptor descriptor = getDescriptor();
+        return new RecipeDescriptor("Rewrite.Properties.AddProperty", descriptor.getDisplayName(), descriptor.getDescription(), descriptor.getTags(),
+                descriptor.getEstimatedEffortPerOccurrence(), descriptor.getOptions(), descriptor.getRecipeList(), descriptor.getDataTables(),
+                descriptor.getMaintainers(), descriptor.getContributors(), descriptor.getExamples(), descriptor.getSource());
     }
 
-    @Override
-    public int maxCycles() {
-        return 1;
-    }
-
-    @Value
-    @RequiredArgsConstructor
-    private static class RemotingClient {
-        Path executable;
-        Path socket;
-        @NonFinal
-        boolean started;
-
-        public static RemotingClient create(Recipe recipe, ExecutionContext ctx) {
-            RemotingClient remotingClient = ctx.getMessage(AddPropertyDemo.class.getName());
-            if (remotingClient == null) {
-                Path workingDirectory = WorkingDirectoryExecutionContextView.view(ctx).getWorkingDirectory();
-                Path path = Paths.get("/tmp/my.sock");
-                if (!Files.exists(path)) {
-                    path = Paths.get("/tmp").resolve(UUID.randomUUID() + ".sock");
-                }
-                RemotingClient finalRemotingClient = new RemotingClient(installExecutable("demo", workingDirectory), path);
-                ctx.putMessage(AddPropertyDemo.class.getName(), finalRemotingClient);
-//                Runtime.getRuntime().addShutdownHook(new Thread(finalState::close));
-                remotingClient = finalRemotingClient;
-            }
-
-            return remotingClient;
-        }
-
-        public void process() {
-            if (started || (Files.exists(socket) && (started = hello()))) {
-                return;
-            }
-            try {
-                new ProcessBuilder().command(executable.toString(), socket.toString()).start();
-                long timeout = System.currentTimeMillis() + 5_000;
-                while (!(started = hello()) && System.currentTimeMillis() < timeout) {
-                    try {
-                        Thread.sleep(5);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        public boolean hello() {
-            UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socket);
-            try (var channel = SocketChannel.open(address)) {
-                CBORGenerator generator = new CBORFactory().createGenerator(Channels.newOutputStream(channel));
-                generator.writeString("hello");
-                generator.flush();
-                return true;
-            } catch (IOException e) {
-                return false;
-            }
-        }
-
-        private static Path installExecutable(String resourcePath, Path workingDirectory) {
-            try {
-                Path devTimePath = Paths.get("src/main/resources/" + resourcePath);
-                if (Files.exists(devTimePath)) {
-                    return devTimePath;
-                } else {
-                    try (InputStream in = requireNonNull(AddPropertyDemo.class.getClassLoader().getResourceAsStream(resourcePath))) {
-                        Path targetPath = workingDirectory.resolve(resourcePath);
-                        try (OutputStream out = Files.newOutputStream(targetPath)) {
-                            in.transferTo(out);
-                        }
-                        Files.setPosixFilePermissions(targetPath, PosixFilePermissions.fromString("rwxr-xr-x"));
-                        return targetPath;
-                    }
-                }
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-    }
 }
