@@ -170,7 +170,7 @@ class RemotingClient {
                 parser.nextToken();
                 recipes.put(recipe, parser.getIntValue());
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to register recipe " + recipe + " with options " + recipe.getOptions(), e);
             }
         }
         return recipes.get(recipe);
