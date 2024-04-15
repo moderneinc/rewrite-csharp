@@ -70,7 +70,7 @@ public class DependencyInsightDemo extends Recipe {
                 document = runRecipe(document, ctx);
                 document.getMarkers().findFirst(ProjectDependencies.class).ifPresent(deps -> {
                     deps.getDependencies().forEach(dep -> {
-                        dependenciesInUse.insertRow(ctx, new DependenciesInUse.Row(deps.getProjectName(), dep.get("package").toString(), dep.get("version").toString()));
+                        dependenciesInUse.insertRow(ctx, new DependenciesInUse.Row(deps.getProjectFile(), dep.get("package").toString(), dep.get("version").toString()));
                     });
                 });
                 return SearchResult.found(document);

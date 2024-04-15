@@ -30,9 +30,9 @@ public class DependenciesInUse extends DataTable<DependenciesInUse.Row> {
 
     @Value
     public static class Row {
-        @Column(displayName = "Project name",
-                description = "The name of the project that contains the dependency.")
-        String projectName;
+        @Column(displayName = "Project file",
+                description = "The path to the `.csproj` project file.")
+        String projectFile;
 
         @Column(displayName = "Package ID",
                 description = "The NuGet package ID of the dependency.")

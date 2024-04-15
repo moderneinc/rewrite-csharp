@@ -38,9 +38,8 @@ class DependencyInsightDemoTest implements RewriteTest {
           spec -> spec.cycles(1).expectedCyclesThatMakeChanges(1)
             .dataTable(DependenciesInUse.Row.class, rows -> {
                 assertThat(rows).isNotEmpty();
-                DependenciesInUse.Row row = rows.get(0);
                 assertThat(rows).allSatisfy(
-                  r -> assertThat(r.getProjectName()).isEqualTo("foo")
+                  r -> assertThat(r.getProjectFile()).isEqualTo("foo.csproj")
                 );
                 assertThat(rows).satisfiesExactly(
                   d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.Build.Framework"),
