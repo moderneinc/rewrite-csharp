@@ -80,10 +80,7 @@ public class AddPropertyDemo extends Recipe {
     }
 
     private static RemotingClient getRemotingClient(ExecutionContext ctx) {
-        return RemotingClient.create(ctx, () -> {
-            String os = System.getProperty("os.name").toLowerCase();
-            return RemotingClient.getExecutable(Paths.get(os.contains("mac") ? "demo.osx" : "demo.linux"), AddPropertyDemo.class.getClassLoader(), null);
-        });
+        return RemotingClient.create(ctx, () -> RemotingClient.getExecutable(Paths.get("Rewrite.Server.dll"), AddPropertyDemo.class.getClassLoader(), null));
     }
 
     private RecipeDescriptor getRemoteDescriptor() {
