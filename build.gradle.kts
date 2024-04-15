@@ -76,6 +76,10 @@ val emptyJavadocJar = tasks.create<Jar>("emptyJavadocJar") {
     archiveClassifier.set("javadoc")
 }
 
+license {
+    exclude("src/main/resources/dotnet/**/*")
+}
+
 publishing {
     publications.named<MavenPublication>("nebula") {
         artifactId = project.name
