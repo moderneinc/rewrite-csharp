@@ -77,7 +77,7 @@ val emptyJavadocJar = tasks.create<Jar>("emptyJavadocJar") {
 }
 
 license {
-    exclude("src/main/resources/dotnet/*.json")
+    exclude("dotnet/**/*.json")
 }
 
 publishing {
