@@ -17,11 +17,9 @@ package org.openrewrite.csharp;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
-import org.openrewrite.csharp.marker.ProjectDependencies;
+import org.openrewrite.csharp.table.DependenciesInUse;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
-
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.openrewrite.xml.Assertions.xml;
@@ -37,7 +35,26 @@ class DependencyInsightDemoTest implements RewriteTest {
     @Test
     void none() {
         rewriteRun(
-          spec -> spec.cycles(1).expectedCyclesThatMakeChanges(1),
+          spec -> spec.cycles(1).expectedCyclesThatMakeChanges(1)
+            .dataTable(DependenciesInUse.Row.class, rows -> {
+                assertThat(rows).isNotEmpty();
+                DependenciesInUse.Row row = rows.get(0);
+                assertThat(rows).allSatisfy(
+                  r -> assertThat(r.getProjectName()).isEqualTo("foo")
+                );
+                assertThat(rows).satisfiesExactly(
+                  d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.Build.Framework"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.NET.StringTools"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Collections.Immutable"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Configuration.ConfigurationManager"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Diagnostics.EventLog"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Security.Cryptography.ProtectedData"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Reflection.MetadataLoadContext"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Reflection.Metadata"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Security.Principal.Windows"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Threading.Tasks.Dataflow")
+                );
+            }),
           xml(
             //language=xml
             """
@@ -66,22 +83,6 @@ class DependencyInsightDemoTest implements RewriteTest {
               </Project>
               """,
             spec -> spec.path("foo.csproj")
-              .afterRecipe(doc -> {
-                  Optional<ProjectDependencies> dependencies = doc.getMarkers().findFirst(ProjectDependencies.class);
-                  assertThat(dependencies).isPresent();
-                  assertThat(dependencies.get().getDependencies()).satisfiesExactly(
-                    d -> assertThat(d.get("package")).isEqualTo("Microsoft.Build.Framework"),
-                    d -> assertThat(d.get("package")).isEqualTo("Microsoft.NET.StringTools"),
-                    d -> assertThat(d.get("package")).isEqualTo("System.Collections.Immutable"),
-                    d -> assertThat(d.get("package")).isEqualTo("System.Configuration.ConfigurationManager"),
-                    d -> assertThat(d.get("package")).isEqualTo("System.Diagnostics.EventLog"),
-                    d -> assertThat(d.get("package")).isEqualTo("System.Security.Cryptography.ProtectedData"),
-                    d -> assertThat(d.get("package")).isEqualTo("System.Reflection.MetadataLoadContext"),
-                    d -> assertThat(d.get("package")).isEqualTo("System.Reflection.Metadata"),
-                    d -> assertThat(d.get("package")).isEqualTo("System.Security.Principal.Windows"),
-                    d -> assertThat(d.get("package")).isEqualTo("System.Threading.Tasks.Dataflow")
-                  );
-              })
           )
         );
     }

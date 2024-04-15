@@ -24,6 +24,8 @@ import org.openrewrite.SourceFile;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.config.OptionDescriptor;
 import org.openrewrite.config.RecipeDescriptor;
+import org.openrewrite.csharp.marker.ProjectDependencies;
+import org.openrewrite.csharp.table.DependenciesInUse;
 import org.openrewrite.marker.SearchResult;
 import org.openrewrite.remote.JsonSender;
 import org.openrewrite.remote.ReceiverContext;
@@ -41,6 +43,8 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = false)
 @RequiredArgsConstructor
 public class DependencyInsightDemo extends Recipe {
+
+    transient DependenciesInUse dependenciesInUse = new DependenciesInUse(this);
 
     @Override
     public String getDisplayName() {
@@ -63,7 +67,13 @@ public class DependencyInsightDemo extends Recipe {
 
             @Override
             public Xml.Document visitDocument(Xml.Document document, ExecutionContext ctx) {
-                return SearchResult.found(runRecipe(document, ctx));
+                document = runRecipe(document, ctx);
+                document.getMarkers().findFirst(ProjectDependencies.class).ifPresent(deps -> {
+                    deps.getDependencies().forEach(dep -> {
+                        dependenciesInUse.insertRow(ctx, new DependenciesInUse.Row(deps.getProjectName(), dep.get("package").toString(), dep.get("version").toString()));
+                    });
+                });
+                return SearchResult.found(document);
             }
         };
     }

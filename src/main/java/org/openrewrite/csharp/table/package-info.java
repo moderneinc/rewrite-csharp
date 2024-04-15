@@ -13,22 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openrewrite.csharp.marker;
+@NonNullApi
+@NonNullFields
+package org.openrewrite.csharp.table;
 
-import lombok.EqualsAndHashCode;
-import lombok.Value;
-import lombok.With;
-import org.openrewrite.marker.Marker;
-
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-@Value
-@With
-public class ProjectDependencies implements Marker {
-    @EqualsAndHashCode.Exclude
-    UUID id;
-    String projectName;
-    List<Map<String, Object>> dependencies;
-}
+import org.openrewrite.internal.lang.NonNullApi;
+import org.openrewrite.internal.lang.NonNullFields;
