@@ -42,6 +42,7 @@ class DependencyInsightDemoTest implements RewriteTest {
                   r -> assertThat(r.getProjectFile()).isEqualTo("foo.csproj")
                 );
                 assertThat(rows).satisfiesExactly(
+                  d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.Build"),
                   d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.Build.Framework"),
                   d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.NET.StringTools"),
                   d -> assertThat(d.getPackageId()).isEqualTo("System.Collections.Immutable"),
@@ -51,7 +52,9 @@ class DependencyInsightDemoTest implements RewriteTest {
                   d -> assertThat(d.getPackageId()).isEqualTo("System.Reflection.MetadataLoadContext"),
                   d -> assertThat(d.getPackageId()).isEqualTo("System.Reflection.Metadata"),
                   d -> assertThat(d.getPackageId()).isEqualTo("System.Security.Principal.Windows"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Threading.Tasks.Dataflow")
+                  d -> assertThat(d.getPackageId()).isEqualTo("System.Threading.Tasks.Dataflow"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.Build.Locator"),
+                  d -> assertThat(d.getPackageId()).isEqualTo("NuGet.Protocol")
                 );
             }),
           xml(
