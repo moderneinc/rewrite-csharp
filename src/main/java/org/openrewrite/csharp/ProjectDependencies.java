@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openrewrite.csharp.marker;
+package org.openrewrite.csharp;
 
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -26,6 +26,7 @@ import java.util.UUID;
 
 @Value
 @With
+// TODO move into `marker` package once class loading issue is resolved
 public class ProjectDependencies implements Marker {
     @EqualsAndHashCode.Exclude
     UUID id;
