@@ -48,13 +48,13 @@ public class DependencyInsightDemo extends Recipe {
 
     @Override
     public String getDisplayName() {
-        return "Demo recipe adding a property to a `.properties` file using a C# recipe";
+        return "C# dependency insight";
     }
 
     @Override
     public String getDescription() {
-        return "Demonstrates how to add a property to a `.properties` file using a C# recipe.\n\n" +
-               "The actual recipe being executed is implemented in C# and is running in a separate process.";
+        return "Find all direct and transitive dependencies of a C# project with a `.csproj` file. " +
+               "Results are reported in a data table.";
     }
 
     @Override
