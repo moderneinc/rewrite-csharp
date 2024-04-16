@@ -80,7 +80,7 @@ public class DependencyInsightDemo extends Recipe {
     private Xml.Document runRecipe(Xml.Document document, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
         return remotingClient.runRecipe(getRemoteDescriptor(), document, (out, before) -> {
-            XmlSender sender = new XmlSender(new SenderContext(new JsonSender(out)));
+            XmlSender sender = new XmlSender(new SenderContext(new JsonSender(out, DependencyInsightDemo.class.getClassLoader())));
             sender.send(document, before);
         }, jsonReceiver -> {
             XmlReceiver receiver = new XmlReceiver(new ReceiverContext(jsonReceiver));
