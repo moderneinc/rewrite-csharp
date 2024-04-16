@@ -79,8 +79,8 @@ public class AddPropertyDemo extends Recipe {
         });
     }
 
-    private static RemotingClient getRemotingClient(ExecutionContext ctx) {
-        return RemotingClient.create(ctx, () -> RemotingClient.getExecutable(Paths.get("Rewrite.Server.dll"), AddPropertyDemo.class.getClassLoader(), null));
+    private RemotingClient getRemotingClient(ExecutionContext ctx) {
+        return RemotingClient.create(ctx, this, Paths.get("dotnet/Rewrite.Server.dll"));
     }
 
     private RecipeDescriptor getRemoteDescriptor() {
