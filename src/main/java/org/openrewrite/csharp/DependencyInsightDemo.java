@@ -24,6 +24,7 @@ import org.openrewrite.SourceFile;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.config.OptionDescriptor;
 import org.openrewrite.config.RecipeDescriptor;
+import org.openrewrite.csharp.marker.ProjectDependencies;
 import org.openrewrite.csharp.table.DependenciesInUse;
 import org.openrewrite.marker.SearchResult;
 import org.openrewrite.remote.JsonSender;
