@@ -27,9 +27,9 @@ import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.csharp.marker.ProjectDependencies;
 import org.openrewrite.csharp.table.DependenciesInUse;
 import org.openrewrite.marker.SearchResult;
+import org.openrewrite.remote.Receiver;
 import org.openrewrite.remote.RemotingClient;
 import org.openrewrite.remote.Sender;
-import org.openrewrite.remote.xml.XmlReceiver;
 import org.openrewrite.xml.XmlIsoVisitor;
 import org.openrewrite.xml.tree.Xml;
 
@@ -78,10 +78,10 @@ public class DependencyInsightDemo extends Recipe {
     private Xml.Document runRecipe(Xml.Document document, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
         return remotingClient.runRecipe(getRemoteDescriptor(), document, (senderContext, before) -> {
-            Sender<Xml> sender = senderContext.newSender(document);
+            Sender<Xml> sender = senderContext.newSender(Xml.class);
             sender.send(document, before);
         }, receiverContext -> {
-            XmlReceiver receiver = new XmlReceiver(receiverContext);
+            Receiver<Xml> receiver = receiverContext.newReceiver(Xml.class);
             return (Xml.Document) receiver.receive(document);
         });
     }

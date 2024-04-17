@@ -26,9 +26,9 @@ import org.openrewrite.config.OptionDescriptor;
 import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.properties.PropertiesIsoVisitor;
 import org.openrewrite.properties.tree.Properties;
-import org.openrewrite.remote.*;
-import org.openrewrite.remote.properties.PropertiesReceiver;
-import org.openrewrite.remote.properties.PropertiesSender;
+import org.openrewrite.remote.Receiver;
+import org.openrewrite.remote.RemotingClient;
+import org.openrewrite.remote.Sender;
 
 import java.nio.file.Paths;
 import java.util.List;
@@ -71,10 +71,10 @@ public class AddPropertyDemo extends Recipe {
     private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
         return remotingClient.runRecipe(getRemoteDescriptor(), file, (senderContext, before) -> {
-            Sender<Properties> sender = senderContext.newSender(file);
+            Sender<Properties> sender = senderContext.newSender(Properties.class);
             sender.send(file, before);
         }, receiverContext -> {
-            PropertiesReceiver receiver = new PropertiesReceiver(receiverContext);
+            Receiver<Properties> receiver = receiverContext.newReceiver(Properties.class);
             return (Properties.File) receiver.receive(file);
         });
     }
