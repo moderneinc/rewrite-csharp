@@ -70,11 +70,11 @@ public class AddPropertyDemo extends Recipe {
 
     private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
-        return remotingClient.runRecipe(getRemoteDescriptor(), file, (out, before) -> {
-            PropertiesSender sender = new PropertiesSender(new SenderContext(new JsonSender(out, AddPropertyDemo.class.getClassLoader())));
+        return remotingClient.runRecipe(getRemoteDescriptor(), file, (senderContext, before) -> {
+            Sender<Properties> sender = senderContext.newSender(file);
             sender.send(file, before);
-        }, jsonReceiver -> {
-            PropertiesReceiver receiver = new PropertiesReceiver(new ReceiverContext(jsonReceiver));
+        }, receiverContext -> {
+            PropertiesReceiver receiver = new PropertiesReceiver(receiverContext);
             return (Properties.File) receiver.receive(file);
         });
     }

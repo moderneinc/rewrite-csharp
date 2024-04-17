@@ -27,12 +27,9 @@ import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.csharp.marker.ProjectDependencies;
 import org.openrewrite.csharp.table.DependenciesInUse;
 import org.openrewrite.marker.SearchResult;
-import org.openrewrite.remote.JsonSender;
-import org.openrewrite.remote.ReceiverContext;
 import org.openrewrite.remote.RemotingClient;
-import org.openrewrite.remote.SenderContext;
+import org.openrewrite.remote.Sender;
 import org.openrewrite.remote.xml.XmlReceiver;
-import org.openrewrite.remote.xml.XmlSender;
 import org.openrewrite.xml.XmlIsoVisitor;
 import org.openrewrite.xml.tree.Xml;
 
@@ -80,11 +77,11 @@ public class DependencyInsightDemo extends Recipe {
 
     private Xml.Document runRecipe(Xml.Document document, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
-        return remotingClient.runRecipe(getRemoteDescriptor(), document, (out, before) -> {
-            XmlSender sender = new XmlSender(new SenderContext(new JsonSender(out, DependencyInsightDemo.class.getClassLoader())));
+        return remotingClient.runRecipe(getRemoteDescriptor(), document, (senderContext, before) -> {
+            Sender<Xml> sender = senderContext.newSender(document);
             sender.send(document, before);
-        }, jsonReceiver -> {
-            XmlReceiver receiver = new XmlReceiver(new ReceiverContext(jsonReceiver));
+        }, receiverContext -> {
+            XmlReceiver receiver = new XmlReceiver(receiverContext);
             return (Xml.Document) receiver.receive(document);
         });
     }
