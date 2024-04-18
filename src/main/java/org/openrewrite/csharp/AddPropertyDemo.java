@@ -87,9 +87,9 @@ public class AddPropertyDemo extends Recipe {
         RecipeDescriptor descriptor = getDescriptor();
         List<OptionDescriptor> options = descriptor.getOptions().stream().map(o -> {
             Object optionValue;
-            if (o.getName().equals("property")) {
+            if ("property".equals(o.getName())) {
                 optionValue = property;
-            } else if (o.getName().equals("value")) {
+            } else if ("value".equals(o.getName())) {
                 optionValue = value;
             } else {
                 optionValue = o.getValue();
