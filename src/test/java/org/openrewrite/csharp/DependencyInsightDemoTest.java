@@ -18,6 +18,7 @@ package org.openrewrite.csharp;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.openrewrite.csharp.table.DependenciesInUse;
+import org.openrewrite.marker.Markup;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 
@@ -33,7 +34,7 @@ class DependencyInsightDemoTest implements RewriteTest {
     }
 
     @Test
-    void none() {
+    void simple() {
         rewriteRun(
           spec -> spec.cycles(1).expectedCyclesThatMakeChanges(1)
             .dataTable(DependenciesInUse.Row.class, rows -> {
@@ -85,6 +86,48 @@ class DependencyInsightDemoTest implements RewriteTest {
               </Project>
               """,
             spec -> spec.path("foo.csproj")
+          )
+        );
+    }
+
+    @Test
+    void msbuildPropertyVersion() {
+        rewriteRun(
+          spec -> spec.cycles(1).expectedCyclesThatMakeChanges(1),
+          xml(
+            //language=xml
+            """
+              <Project Sdk="Microsoft.NET.Sdk">
+              
+                <PropertyGroup>
+                  <TargetFramework>net471</TargetFramework>
+                </PropertyGroup>
+              
+                <ItemGroup>
+                  <PackageReference Include="NodaTime" Version="$(NodaTimeVersion)" />
+                  <PackageReference Include="Humanizer" Version="$(HumanizerVersion)" />
+                </ItemGroup>
+              
+              </Project>
+              """,
+            //language=xml
+            """
+              <!--~~(Value cannot be null or an empty string. (Parameter 'value'))~~>--><!--~~>--><Project Sdk="Microsoft.NET.Sdk">
+              
+                <PropertyGroup>
+                  <TargetFramework>net471</TargetFramework>
+                </PropertyGroup>
+              
+                <ItemGroup>
+                  <PackageReference Include="NodaTime" Version="$(NodaTimeVersion)" />
+                  <PackageReference Include="Humanizer" Version="$(HumanizerVersion)" />
+                </ItemGroup>
+              
+              </Project>
+              """,
+            spec -> spec.path("foo.csproj").afterRecipe(doc -> {
+                assertThat(doc.getMarkers().findFirst(Markup.Warn.class)).isPresent();
+            })
           )
         );
     }
