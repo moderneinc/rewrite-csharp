@@ -30,7 +30,7 @@ class DependencyInsightDemoTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new DependencyInsightDemo());
+        spec.recipe(new DependencyInsightDemo(null));
     }
 
     @Test

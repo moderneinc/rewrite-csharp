@@ -18,14 +18,12 @@ package org.openrewrite.csharp;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
-import org.openrewrite.ExecutionContext;
-import org.openrewrite.Recipe;
-import org.openrewrite.SourceFile;
-import org.openrewrite.TreeVisitor;
+import org.openrewrite.*;
 import org.openrewrite.config.OptionDescriptor;
 import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.csharp.marker.ProjectDependencies;
 import org.openrewrite.csharp.table.DependenciesInUse;
+import org.openrewrite.internal.lang.Nullable;
 import org.openrewrite.marker.SearchResult;
 import org.openrewrite.remote.Receiver;
 import org.openrewrite.remote.RemotingClient;
@@ -42,6 +40,13 @@ import java.util.List;
 public class DependencyInsightDemo extends Recipe {
 
     transient DependenciesInUse dependenciesInUse = new DependenciesInUse(this);
+
+    @Option(displayName = "Package pattern",
+            description = "NuGet package glob pattern used to match dependencies.",
+            required = false,
+            example = "System.Collections.Immutable")
+    @Nullable
+    String packagePattern;
 
     @Override
     public String getDisplayName() {
@@ -92,7 +97,15 @@ public class DependencyInsightDemo extends Recipe {
 
     private RecipeDescriptor getRemoteDescriptor() {
         RecipeDescriptor descriptor = getDescriptor();
-        List<OptionDescriptor> options = descriptor.getOptions();
+        List<OptionDescriptor> options = descriptor.getOptions().stream().map(o -> {
+            Object optionValue;
+            if (o.getName().equals("pacakgePattern")) {
+                optionValue = packagePattern;
+            } else {
+                optionValue = o.getValue();
+            }
+            return new OptionDescriptor(o.getName(), o.getType(), o.getDisplayName(), o.getDescription(), o.getExample(), o.getValid(), o.isRequired(), optionValue);
+        }).toList();
         return new RecipeDescriptor("Rewrite.MSBuild.DependencyInsight", descriptor.getDisplayName(), descriptor.getDescription(), descriptor.getTags(),
                 descriptor.getEstimatedEffortPerOccurrence(), options, descriptor.getRecipeList(), descriptor.getDataTables(),
                 descriptor.getMaintainers(), descriptor.getContributors(), descriptor.getExamples(), descriptor.getSource());
