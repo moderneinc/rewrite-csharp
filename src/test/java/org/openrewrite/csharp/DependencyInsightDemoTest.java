@@ -41,20 +41,20 @@ class DependencyInsightDemoTest implements RewriteTest {
                 assertThat(rows).allSatisfy(
                   r -> assertThat(r.getProjectFile()).isEqualTo("foo.csproj")
                 );
-                assertThat(rows.stream().map(r -> r.getPackageId() + ':' + r.getVersion())).satisfiesExactly(
-                  d -> assertThat(d).isEqualTo("Microsoft.Build:17.9.5"),
-                  d -> assertThat(d).isEqualTo("Microsoft.Build.Framework:17.9.5"),
-                  d -> assertThat(d).isEqualTo("Microsoft.NET.StringTools:17.9.5"),
-                  d -> assertThat(d).isEqualTo("System.Collections.Immutable:8.0.0"),
-                  d -> assertThat(d).isEqualTo("System.Configuration.ConfigurationManager:8.0.0"),
-                  d -> assertThat(d).isEqualTo("System.Diagnostics.EventLog:8.0.0"),
-                  d -> assertThat(d).isEqualTo("System.Security.Cryptography.ProtectedData:8.0.0"),
-                  d -> assertThat(d).isEqualTo("System.Reflection.MetadataLoadContext:8.0.0"),
-                  d -> assertThat(d).isEqualTo("System.Reflection.Metadata:8.0.0"),
-                  d -> assertThat(d).isEqualTo("System.Security.Principal.Windows:5.0.0"),
-                  d -> assertThat(d).isEqualTo("System.Threading.Tasks.Dataflow:8.0.0"),
-                  d -> assertThat(d).isEqualTo("Microsoft.Build.Locator:1.7.8"),
-                  d -> assertThat(d).isEqualTo("NuGet.Protocol:6.9.1")
+                assertThat(rows.stream().map(r -> r.getPackageId() + ':' + r.getVersion())).containsExactly(
+                  "Microsoft.Build:17.9.5",
+                  "Microsoft.Build.Framework:17.9.5",
+                  "Microsoft.NET.StringTools:17.9.5",
+                  "System.Collections.Immutable:8.0.0",
+                  "System.Configuration.ConfigurationManager:8.0.0",
+                  "System.Diagnostics.EventLog:8.0.0",
+                  "System.Security.Cryptography.ProtectedData:8.0.0",
+                  "System.Reflection.MetadataLoadContext:8.0.0",
+                  "System.Reflection.Metadata:8.0.0",
+                  "System.Security.Principal.Windows:5.0.0",
+                  "System.Threading.Tasks.Dataflow:8.0.0",
+                  "Microsoft.Build.Locator:1.7.8",
+                  "NuGet.Protocol:6.9.1"
                 );
             }),
           xml(
