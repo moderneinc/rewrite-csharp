@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openrewrite.csharp;
+package org.openrewrite.csharp.search;
 
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +38,7 @@ import java.util.Optional;
 @Value
 @EqualsAndHashCode(callSuper = false)
 @RequiredArgsConstructor
-public class DependencyInsightDemo extends Recipe {
+public class DependencyInsight extends Recipe {
 
     transient DependenciesInUse dependenciesInUse = new DependenciesInUse(this);
 

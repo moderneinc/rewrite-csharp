@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openrewrite.csharp;
+package org.openrewrite.csharp.search;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.openrewrite.csharp.table.DependenciesInUse;
-import org.openrewrite.marker.Markup;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 
@@ -26,11 +25,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.openrewrite.xml.Assertions.xml;
 
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true")
-class DependencyInsightDemoTest implements RewriteTest {
+class DependencyInsightTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new DependencyInsightDemo(null));
+        spec.recipe(new DependencyInsight(null));
     }
 
     @Test
@@ -93,7 +92,7 @@ class DependencyInsightDemoTest implements RewriteTest {
     @Test
     void msbuildPropertyVersion() {
         rewriteRun(
-          spec -> spec.cycles(1).expectedCyclesThatMakeChanges(1),
+          spec -> spec.cycles(1),
           xml(
             //language=xml
             """
@@ -109,25 +108,7 @@ class DependencyInsightDemoTest implements RewriteTest {
                 </ItemGroup>
               
               </Project>
-              """,
-            //language=xml
-            """
-              <!--~~(Value cannot be null or an empty string. (Parameter 'value'))~~>--><!--~~>--><Project Sdk="Microsoft.NET.Sdk">
-              
-                <PropertyGroup>
-                  <TargetFramework>net471</TargetFramework>
-                </PropertyGroup>
-              
-                <ItemGroup>
-                  <PackageReference Include="NodaTime" Version="$(NodaTimeVersion)" />
-                  <PackageReference Include="Humanizer" Version="$(HumanizerVersion)" />
-                </ItemGroup>
-              
-              </Project>
-              """,
-            spec -> spec.path("foo.csproj").afterRecipe(doc -> {
-                assertThat(doc.getMarkers().findFirst(Markup.Warn.class)).isPresent();
-            })
+              """
           )
         );
     }
