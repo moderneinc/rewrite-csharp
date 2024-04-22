@@ -41,20 +41,20 @@ class DependencyInsightDemoTest implements RewriteTest {
                 assertThat(rows).allSatisfy(
                   r -> assertThat(r.getProjectFile()).isEqualTo("foo.csproj")
                 );
-                assertThat(rows).satisfiesExactly(
-                  d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.Build"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.Build.Framework"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.NET.StringTools"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Collections.Immutable"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Configuration.ConfigurationManager"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Diagnostics.EventLog"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Security.Cryptography.ProtectedData"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Reflection.MetadataLoadContext"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Reflection.Metadata"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Security.Principal.Windows"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("System.Threading.Tasks.Dataflow"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("Microsoft.Build.Locator"),
-                  d -> assertThat(d.getPackageId()).isEqualTo("NuGet.Protocol")
+                assertThat(rows.stream().map(r -> r.getPackageId() + ':' + r.getVersion())).satisfiesExactly(
+                  d -> assertThat(d).isEqualTo("Microsoft.Build:17.9.5"),
+                  d -> assertThat(d).isEqualTo("Microsoft.Build.Framework:17.9.5"),
+                  d -> assertThat(d).isEqualTo("Microsoft.NET.StringTools:17.9.5"),
+                  d -> assertThat(d).isEqualTo("System.Collections.Immutable:8.0.0"),
+                  d -> assertThat(d).isEqualTo("System.Configuration.ConfigurationManager:8.0.0"),
+                  d -> assertThat(d).isEqualTo("System.Diagnostics.EventLog:8.0.0"),
+                  d -> assertThat(d).isEqualTo("System.Security.Cryptography.ProtectedData:8.0.0"),
+                  d -> assertThat(d).isEqualTo("System.Reflection.MetadataLoadContext:8.0.0"),
+                  d -> assertThat(d).isEqualTo("System.Reflection.Metadata:8.0.0"),
+                  d -> assertThat(d).isEqualTo("System.Security.Principal.Windows:5.0.0"),
+                  d -> assertThat(d).isEqualTo("System.Threading.Tasks.Dataflow:8.0.0"),
+                  d -> assertThat(d).isEqualTo("Microsoft.Build.Locator:1.7.8"),
+                  d -> assertThat(d).isEqualTo("NuGet.Protocol:6.9.1")
                 );
             }),
           xml(
