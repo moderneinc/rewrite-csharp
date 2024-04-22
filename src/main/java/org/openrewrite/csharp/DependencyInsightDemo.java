@@ -99,7 +99,7 @@ public class DependencyInsightDemo extends Recipe {
         RecipeDescriptor descriptor = getDescriptor();
         List<OptionDescriptor> options = descriptor.getOptions().stream().map(o -> {
             Object optionValue;
-            if (o.getName().equals("pacakgePattern")) {
+            if (o.getName().equals("packagePattern")) {
                 optionValue = packagePattern;
             } else {
                 optionValue = o.getValue();
