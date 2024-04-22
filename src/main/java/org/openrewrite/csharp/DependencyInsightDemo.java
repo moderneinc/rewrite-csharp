@@ -33,6 +33,7 @@ import org.openrewrite.xml.tree.Xml;
 
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -70,12 +71,11 @@ public class DependencyInsightDemo extends Recipe {
             @Override
             public Xml.Document visitDocument(Xml.Document document, ExecutionContext ctx) {
                 document = runRecipe(document, ctx);
-                document.getMarkers().findFirst(ProjectDependencies.class).ifPresent(deps -> {
-                    deps.getDependencies().forEach(dep -> {
-                        dependenciesInUse.insertRow(ctx, new DependenciesInUse.Row(deps.getProjectFile(), dep.get("package").toString(), dep.get("version").toString()));
-                    });
-                });
-                return SearchResult.found(document);
+                Optional<ProjectDependencies> dependencies = document.getMarkers().findFirst(ProjectDependencies.class);
+                dependencies.ifPresent(deps -> deps.getDependencies().forEach(dep -> {
+                    dependenciesInUse.insertRow(ctx, new DependenciesInUse.Row(deps.getProjectFile(), dep.get("package").toString(), dep.get("version").toString()));
+                }));
+                return dependencies.isPresent() ? SearchResult.found(document) : document;
             }
         };
     }
