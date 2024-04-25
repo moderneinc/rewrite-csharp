@@ -72,9 +72,8 @@ public class DependencyInsight extends Recipe {
             public Xml.Document visitDocument(Xml.Document document, ExecutionContext ctx) {
                 document = runRecipe(document, ctx);
                 Optional<ProjectDependencies> dependencies = document.getMarkers().findFirst(ProjectDependencies.class);
-                dependencies.ifPresent(deps -> deps.getDependencies().forEach(dep -> {
-                    dependenciesInUse.insertRow(ctx, new DependenciesInUse.Row(deps.getProjectFile(), dep.get("package").toString(), dep.get("version").toString()));
-                }));
+                dependencies.ifPresent(deps -> deps.getDependencies().forEach(dep ->
+                    dependenciesInUse.insertRow(ctx, new DependenciesInUse.Row(deps.getProjectFile(), dep.get("package").toString(), dep.get("version").toString()))));
                 return dependencies.isPresent() ? SearchResult.found(document) : document;
             }
         };
@@ -99,7 +98,7 @@ public class DependencyInsight extends Recipe {
         RecipeDescriptor descriptor = getDescriptor();
         List<OptionDescriptor> options = descriptor.getOptions().stream().map(o -> {
             Object optionValue;
-            if (o.getName().equals("packagePattern")) {
+            if ("packagePattern".equals(o.getName())) {
                 optionValue = packagePattern;
             } else {
                 optionValue = o.getValue();
