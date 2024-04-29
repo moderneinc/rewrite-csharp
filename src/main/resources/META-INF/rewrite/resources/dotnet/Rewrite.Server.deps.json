@@ -9,6 +9,7 @@
       "Rewrite.Server/1.0.0": {
         "dependencies": {
           "Rewrite.Core": "1.0.0",
+          "Rewrite.Json": "1.0.0",
           "Rewrite.MSBuild": "1.0.0",
           "Rewrite.Properties": "1.0.0",
           "Rewrite.Remote": "1.0.0",
@@ -202,6 +203,15 @@
       "Rewrite.Core/1.0.0": {
         "runtime": {
           "Rewrite.Core.dll": {}
+        }
+      },
+      "Rewrite.Json/1.0.0": {
+        "dependencies": {
+          "Rewrite.Core": "1.0.0",
+          "Rewrite.Remote": "1.0.0"
+        },
+        "runtime": {
+          "Rewrite.Json.dll": {}
         }
       },
       "Rewrite.MSBuild/1.0.0": {
@@ -436,6 +446,11 @@
       "hashPath": "system.threading.tasks.dataflow.8.0.0.nupkg.sha512"
     },
     "Rewrite.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Rewrite.Json/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
