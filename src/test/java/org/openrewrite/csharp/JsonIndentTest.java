@@ -53,6 +53,25 @@ class JsonIndentTest implements RewriteTest {
     }
 
     @Test
+    void bigint() {
+        rewriteRun(
+          json(
+            """
+              {
+                "val": 1000000000000000019884624838656
+              }
+              """,
+            """
+              #  {
+              #    "val": 1000000000000000019884624838656
+              #  }
+              """.replace("#", ""),
+            SourceSpec::noTrim
+          )
+        );
+    }
+
+    @Test
     void comment() {
         rewriteRun(
           json(
