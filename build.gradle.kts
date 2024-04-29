@@ -20,6 +20,7 @@ dependencies {
 
     implementation(platform("org.openrewrite:rewrite-bom:${latest}"))
     implementation("org.openrewrite:rewrite-java")
+    implementation("org.openrewrite:rewrite-json")
     implementation("org.openrewrite:rewrite-properties")
     implementation("org.openrewrite:rewrite-xml")
     implementation("org.openrewrite:rewrite-remote:latest.integration")
