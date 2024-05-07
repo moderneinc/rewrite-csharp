@@ -36,10 +36,14 @@ class FindClassTest implements RewriteTest {
         rewriteRun(
           java(
             """
+              package foo;
+              
               class T {
               }
               """,
             """
+              package foo;
+              
               /*~~>*/class T {
               }
               """,
