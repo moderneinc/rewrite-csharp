@@ -51,4 +51,67 @@ class FindClassTest implements RewriteTest {
           )
         );
     }
+
+    @Test
+    void nested() {
+        rewriteRun(
+          java(
+            """
+              class T {
+                  class T2 {
+                  }
+              }
+              """,
+            """
+              /*~~>*/class T {
+                  /*~~>*/class T2 {
+                  }
+              }
+              """,
+            SourceSpec::noTrim
+          )
+        );
+    }
+
+    @Test
+    void literal() {
+        rewriteRun(
+          java(
+            """
+              class T {
+                  int i = 42;
+              }
+              """,
+            """
+              /*~~>*/class T {
+                  int i = 42;
+              }
+              """,
+            SourceSpec::noTrim
+          )
+        );
+    }
+
+    @Test
+    void lambda() {
+        rewriteRun(
+          java(
+            """
+              import java.util.Optional;
+              
+              class T {
+                  int i = Optional.of(42).map(i -> i * 2).orElse(42);
+              }
+              """,
+            """
+              import java.util.Optional;
+              
+              /*~~>*/class T {
+                  int i = Optional.of(42).map(i -> i * 2).orElse(42);
+              }
+              """,
+            SourceSpec::noTrim
+          )
+        );
+    }
 }
