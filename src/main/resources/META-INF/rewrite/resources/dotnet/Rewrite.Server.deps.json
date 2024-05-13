@@ -161,6 +161,14 @@
       },
       "System.Diagnostics.EventLog/8.0.0": {},
       "System.Formats.Asn1/6.0.0": {},
+      "System.Formats.Cbor/9.0.0-preview.2.24128.5": {
+        "runtime": {
+          "lib/net8.0/System.Formats.Cbor.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.24.12805"
+          }
+        }
+      },
       "System.Reflection.Metadata/8.0.0": {
         "dependencies": {
           "System.Collections.Immutable": "8.0.0"
@@ -248,7 +256,8 @@
       "Rewrite.Remote/1.0.0": {
         "dependencies": {
           "PeterO.Cbor": "5.0.0-alpha1",
-          "Rewrite.Core": "1.0.0"
+          "Rewrite.Core": "1.0.0",
+          "System.Formats.Cbor": "9.0.0-preview.2.24128.5"
         },
         "runtime": {
           "Rewrite.Remote.dll": {}
@@ -412,6 +421,13 @@
       "sha512": "sha512-T6fD00dQ3NTbPDy31m4eQUwKW84s03z0N2C8HpOklyeaDgaJPa/TexP4/SkORMSOwc7WhKifnA6Ya33AkzmafA==",
       "path": "system.formats.asn1/6.0.0",
       "hashPath": "system.formats.asn1.6.0.0.nupkg.sha512"
+    },
+    "System.Formats.Cbor/9.0.0-preview.2.24128.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Gsgd9YhMU/fxPinjs5yX36n97pjtC5eQ+RzNCxzexhOE6ZHaF8D24yQ6g9j/jCP3dg1PhLEgdRyWPmmAzUnSjQ==",
+      "path": "system.formats.cbor/9.0.0-preview.2.24128.5",
+      "hashPath": "system.formats.cbor.9.0.0-preview.2.24128.5.nupkg.sha512"
     },
     "System.Reflection.Metadata/8.0.0": {
       "type": "package",
