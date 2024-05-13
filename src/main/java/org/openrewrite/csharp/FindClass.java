@@ -24,7 +24,9 @@ import org.openrewrite.TreeVisitor;
 import org.openrewrite.config.OptionDescriptor;
 import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.java.JavaIsoVisitor;
+import org.openrewrite.java.marker.JavaSourceSet;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.marker.GitProvenance;
 import org.openrewrite.remote.Receiver;
 import org.openrewrite.remote.RemotingClient;
 import org.openrewrite.remote.Sender;
@@ -61,7 +63,8 @@ public class FindClass extends Recipe {
         RemotingClient remotingClient = getRemotingClient(ctx);
         return remotingClient.runRecipe(getRemoteDescriptor(), document, (senderContext, before) -> {
             Sender<J> sender = senderContext.newSender(J.class);
-            sender.send(document, before);
+            // FIXME transfer these markers somehow
+            sender.send(document.withMarkers(document.getMarkers().removeByType(JavaSourceSet.class).removeByType(GitProvenance.class)), before);
         }, receiverContext -> {
             Receiver<J> receiver = receiverContext.newReceiver(J.class);
             return (J.CompilationUnit) receiver.receive(document);
