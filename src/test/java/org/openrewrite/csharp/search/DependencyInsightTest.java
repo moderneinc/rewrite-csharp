@@ -42,9 +42,9 @@ class DependencyInsightTest implements RewriteTest {
                   r -> assertThat(r.getProjectFile()).isEqualTo("foo.csproj")
                 );
                 assertThat(rows.stream().map(r -> r.getPackageId() + ':' + r.getVersion())).containsExactly(
-                  "Microsoft.Build:17.10.0-preview-24081-01",
-                  "Microsoft.Build.Framework:17.10.0-preview-24081-01",
-                  "Microsoft.NET.StringTools:17.10.0-preview-24081-01",
+                  "Microsoft.Build:17.10.4",
+                  "Microsoft.Build.Framework:17.10.4",
+                  "Microsoft.NET.StringTools:17.10.4",
                   "System.Collections.Immutable:8.0.0",
                   "System.Configuration.ConfigurationManager:8.0.0",
                   "System.Diagnostics.EventLog:8.0.0",
@@ -54,7 +54,7 @@ class DependencyInsightTest implements RewriteTest {
                   "System.Security.Principal.Windows:5.0.0",
                   "System.Threading.Tasks.Dataflow:8.0.0",
                   "Microsoft.Build.Locator:1.7.8",
-                  "NuGet.Protocol:6.9.1"
+                  "NuGet.Protocol:6.10.0"
                 );
             }),
           xml(
