@@ -57,12 +57,7 @@ public class JsonIndent extends Recipe {
 
     private Json.Document runRecipe(Json.Document document, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
-        return remotingClient.runRecipe(
-                getRemoteDescriptor(),
-                document,
-                (senderContext, before) -> senderContext.sendTree(document, before),
-                receiverContext -> receiverContext.receiveTree(document)
-        );
+        return remotingClient.runRecipe(getRemoteDescriptor(), document);
     }
 
     private RemotingClient getRemotingClient(ExecutionContext ctx) {

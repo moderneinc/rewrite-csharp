@@ -68,12 +68,7 @@ public class AddPropertyDemo extends Recipe {
 
     private Properties.File runRecipe(Properties.File file, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
-        return remotingClient.runRecipe(
-                getRemoteDescriptor(),
-                file,
-                (senderContext, before) -> senderContext.sendTree(file, before),
-                receiverContext -> receiverContext.receiveTree(file)
-        );
+        return remotingClient.runRecipe(getRemoteDescriptor(), file);
     }
 
     private RemotingClient getRemotingClient(ExecutionContext ctx) {
