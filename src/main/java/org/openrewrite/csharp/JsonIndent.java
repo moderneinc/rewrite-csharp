@@ -25,9 +25,7 @@ import org.openrewrite.config.OptionDescriptor;
 import org.openrewrite.config.RecipeDescriptor;
 import org.openrewrite.json.JsonIsoVisitor;
 import org.openrewrite.json.tree.Json;
-import org.openrewrite.remote.Receiver;
 import org.openrewrite.remote.RemotingClient;
-import org.openrewrite.remote.Sender;
 
 import java.nio.file.Paths;
 import java.util.List;
@@ -59,13 +57,12 @@ public class JsonIndent extends Recipe {
 
     private Json.Document runRecipe(Json.Document document, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
-        return remotingClient.runRecipe(getRemoteDescriptor(), document, (senderContext, before) -> {
-            Sender<Json> sender = senderContext.newSender(Json.class);
-            sender.send(document, before);
-        }, receiverContext -> {
-            Receiver<Json> receiver = receiverContext.newReceiver(Json.class);
-            return (Json.Document) receiver.receive(document);
-        });
+        return remotingClient.runRecipe(
+                getRemoteDescriptor(),
+                document,
+                (senderContext, before) -> senderContext.sendTree(document, before),
+                receiverContext -> receiverContext.receiveTree(document)
+        );
     }
 
     private RemotingClient getRemotingClient(ExecutionContext ctx) {
