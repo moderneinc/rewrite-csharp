@@ -30,6 +30,8 @@ import org.openrewrite.remote.RemotingClient;
 import java.nio.file.Paths;
 import java.util.List;
 
+import static java.util.Collections.emptyList;
+
 @Value
 @EqualsAndHashCode(callSuper = false)
 @RequiredArgsConstructor
@@ -69,7 +71,7 @@ public class JsonIndent extends Recipe {
         List<OptionDescriptor> options = descriptor.getOptions();
         return new RecipeDescriptor("Rewrite.Json.Indent", descriptor.getDisplayName(), descriptor.getDescription(), descriptor.getTags(),
                 descriptor.getEstimatedEffortPerOccurrence(), options, descriptor.getRecipeList(), descriptor.getDataTables(),
-                descriptor.getMaintainers(), descriptor.getContributors(), descriptor.getExamples(), descriptor.getSource());
+                emptyList(), emptyList(), emptyList(), descriptor.getSource());
     }
 
 }

@@ -31,6 +31,8 @@ import org.openrewrite.remote.RemotingClient;
 import java.nio.file.Paths;
 import java.util.List;
 
+import static java.util.Collections.emptyList;
+
 @Value
 @EqualsAndHashCode(callSuper = false)
 @RequiredArgsConstructor
@@ -90,7 +92,7 @@ public class AddPropertyDemo extends Recipe {
         }).toList();
         return new RecipeDescriptor("Rewrite.Properties.AddProperty", descriptor.getDisplayName(), descriptor.getDescription(), descriptor.getTags(),
                 descriptor.getEstimatedEffortPerOccurrence(), options, descriptor.getRecipeList(), descriptor.getDataTables(),
-                descriptor.getMaintainers(), descriptor.getContributors(), descriptor.getExamples(), descriptor.getSource());
+                emptyList(), emptyList(), emptyList(), descriptor.getSource());
     }
 
 }

@@ -33,6 +33,8 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Collections.emptyList;
+
 @Value
 @EqualsAndHashCode(callSuper = false)
 @RequiredArgsConstructor
@@ -100,7 +102,7 @@ public class DependencyInsight extends Recipe {
         }).toList();
         return new RecipeDescriptor("Rewrite.MSBuild.DependencyInsight", descriptor.getDisplayName(), descriptor.getDescription(), descriptor.getTags(),
                 descriptor.getEstimatedEffortPerOccurrence(), options, descriptor.getRecipeList(), descriptor.getDataTables(),
-                descriptor.getMaintainers(), descriptor.getContributors(), descriptor.getExamples(), descriptor.getSource());
+                emptyList(), emptyList(), emptyList(), descriptor.getSource());
     }
 
 }
