@@ -54,7 +54,7 @@ class DependencyInsightTest implements RewriteTest {
                   "System.Security.Principal.Windows:5.0.0",
                   "System.Threading.Tasks.Dataflow:8.0.0",
                   "Microsoft.Build.Locator:1.7.8",
-                  "NuGet.Protocol:6.10.0"
+                  "NuGet.Protocol:6.11.0-preview.2"
                 );
             }),
           xml(
