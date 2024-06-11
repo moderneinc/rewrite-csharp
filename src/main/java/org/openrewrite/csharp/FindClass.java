@@ -61,10 +61,7 @@ public class FindClass extends Recipe {
 
     private J.CompilationUnit runRecipe(J.CompilationUnit document, ExecutionContext ctx) {
         RemotingClient remotingClient = getRemotingClient(ctx);
-        return remotingClient.runRecipe(getRemoteDescriptor(), document, (senderContext, before) -> {
-            // FIXME transfer these markers somehow
-            senderContext.sendTree(document.withMarkers(document.getMarkers().removeByType(JavaSourceSet.class).removeByType(GitProvenance.class)), before);
-        }, receiverContext -> receiverContext.receiveTree(document));
+        return remotingClient.runRecipe(getRemoteDescriptor(), document.withMarkers(document.getMarkers().removeByType(JavaSourceSet.class).removeByType(GitProvenance.class)));
     }
 
     private RemotingClient getRemotingClient(ExecutionContext ctx) {
