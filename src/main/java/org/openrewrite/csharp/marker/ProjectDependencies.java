@@ -29,6 +29,7 @@ import java.util.UUID;
 public class ProjectDependencies implements Marker {
     @EqualsAndHashCode.Exclude
     UUID id;
+
     String projectFile;
     List<Map<String, Object>> dependencies;
 }

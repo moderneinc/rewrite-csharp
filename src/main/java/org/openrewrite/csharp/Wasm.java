@@ -44,6 +44,7 @@ final class Wasm {
 
     @Nullable
     private WasiCtx wasi;
+
     private Store<?> store;
     private Linker linker;
     private Engine engine;
@@ -118,8 +119,10 @@ final class Wasm {
         Store<?> store;
         Memory memory;
         Linker linker;
+
         @PackagePrivate
         int base;
+
         int size;
 
         static Heap create(Store<?> store, Memory memory, Linker linker, int size) {
