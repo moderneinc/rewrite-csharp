@@ -86,7 +86,7 @@ public class DependencyInsight extends Recipe {
     }
 
     private RemotingClient getRemotingClient(ExecutionContext ctx) {
-        return RemotingClient.create(ctx, this, Paths.get("dotnet/Rewrite.Server.dll"));
+        return RemotingClient.create(ctx, getClass(), Paths.get("dotnet/Rewrite.Server.dll"));
     }
 
     private RecipeDescriptor getRemoteDescriptor() {
